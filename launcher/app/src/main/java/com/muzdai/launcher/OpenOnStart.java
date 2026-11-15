@@ -12,7 +12,7 @@ import android.provider.Settings;
 final class OpenOnStart {
     /** The picked package in Config.SETTINGS_NAME; absent or empty means Off. */
     static final String KEY = "open_on_start";
-    /** The boot whose first Home has been handled, shared with boot_to_live_tv. */
+    /** The boot whose first Home has been handled (the key keeps its old name, so a saved value still counts). */
     static final String BOOT_PREFS = "boot";
     static final String BOOT_KEY = "live_tv_boot";
 

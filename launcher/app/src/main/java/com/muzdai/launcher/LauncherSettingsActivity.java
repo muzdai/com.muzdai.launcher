@@ -3,7 +3,6 @@ package com.muzdai.launcher;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
@@ -45,11 +44,6 @@ import java.util.function.Supplier;
  * a slider. Choices are saved at once.
  */
 public final class LauncherSettingsActivity extends Activity {
-    @Override
-    protected void attachBaseContext(Context base) {
-        super.attachBaseContext(LauncherLocale.wrap(base));   // locale
-    }
-
     static final String EXTRA_REORDER = "com.muzdai.launcher.extra.REORDER_FROM_SETTINGS";
 
     // Google TV settings palette (sampled from the TV's own Settings).
@@ -187,8 +181,6 @@ public final class LauncherSettingsActivity extends Activity {
         config = Config.load(this);
         fork = ForkConfig.load(this);
         setContentView(buildFrame());
-        if (getResources().getBoolean(R.bool.rtl_menu_bar))
-            findViewById(android.R.id.content).setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         stack.add(this::rootPage);
         focusStack.add(-1);
         show(-1);
@@ -202,7 +194,7 @@ public final class LauncherSettingsActivity extends Activity {
         LinearLayout left = new LinearLayout(this);
         left.setOrientation(LinearLayout.VERTICAL);
         left.setPadding(dp(100), dp(56), dp(20), 0);
-        pageTitle = text(36, TEXT, false);
+        pageTitle = text(32, TEXT, false);   // the TV's own settings: 32sp title, 14sp rows, 12sp summaries
         pageTitle.setSingleLine(true);
         pageTitle.setEllipsize(TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, -2);
@@ -223,7 +215,7 @@ public final class LauncherSettingsActivity extends Activity {
         LinearLayout right = new LinearLayout(this);
         right.setOrientation(LinearLayout.VERTICAL);
         right.setPadding(dp(130), dp(56), dp(40), 0);
-        previewTitle = text(36, TEXT_DIM, false);
+        previewTitle = text(32, TEXT_DIM, false);
         previewTitle.setMaxLines(2);
         previewTitle.setEllipsize(TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(-1, -2);
@@ -347,7 +339,7 @@ public final class LauncherSettingsActivity extends Activity {
 
     private View row(Item it, boolean inPreview) {
         if (it.kind == Kind.HEADER) {
-            TextView h = text(13, TEXT_DIM, true);
+            TextView h = text(9, TEXT_DIM, true);
             h.setAllCaps(true);
             h.setLetterSpacing(0.04f);
             h.setText(it.title);
@@ -372,18 +364,18 @@ public final class LauncherSettingsActivity extends Activity {
             icon.setImageResource(it.icon);
             chip.addView(icon, new FrameLayout.LayoutParams(dp(20), dp(20), Gravity.CENTER));
             LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(dp(40), dp(40));
-            cp.setMarginEnd(dp(16));
+            cp.setMarginEnd(dp(12));
             row.addView(chip, cp);
         }
 
         LinearLayout texts = new LinearLayout(this);
         texts.setOrientation(LinearLayout.VERTICAL);
-        TextView title = text(16, TEXT, false);
+        TextView title = text(14, TEXT, false);
         title.setId(R.id.title);
         title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
         texts.addView(title);
-        TextView summary = text(13, TEXT_DIM, false);
+        TextView summary = text(12, TEXT_DIM, false);
         summary.setId(R.id.status);
         summary.setMaxLines(3);
         summary.setEllipsize(TextUtils.TruncateAt.END);
@@ -532,7 +524,7 @@ public final class LauncherSettingsActivity extends Activity {
         preview.setAlpha(1f);
         if (it.description == null) return;
         previewTitle.setText(it.title);
-        TextView d = text(16, TEXT_DIM, false);
+        TextView d = text(14, TEXT_DIM, false);
         d.setText(it.description);
         d.setLineSpacing(0, 1.2f);
         preview.addView(d);

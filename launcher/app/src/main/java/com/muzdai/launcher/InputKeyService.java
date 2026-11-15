@@ -9,12 +9,11 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * Maps the remote's Input button to the system input switcher, from any app. Remotes such as the Chromecast voice
- * remote send KEYCODE_TV for it, others (KTC and Kalley Realtek Google TV remotes) KEYCODE_TV_INPUT; on Google TV
- * the stock launcher handles both, so with the stock launcher disabled the button does nothing. Buttons listed in
- * input_key_keycodes (config.xml) open the input switcher the same way, and app_keys start an app (a
- * YouTube button that only the stock launcher answered). Every other key passes through untouched.
- * Opt-in: a build with INPUT_KEY_SERVICE enables it.
+ * The remote's buttons that only the stock Google TV launcher answered, from any app. The Input button (KEYCODE_TV or
+ * KEYCODE_TV_INPUT) and the buttons in input_key_keycodes (config.xml) open the input switcher; app_keys and the
+ * owner's choices in Launcher settings (ForkKeys) open an app or run an action. Every other key passes through
+ * untouched. Enabled once over ADB: settings put secure enabled_accessibility_services
+ * com.muzdai.launcher/.InputKeyService.
  */
 public class InputKeyService extends AccessibilityService {
 
@@ -25,33 +24,17 @@ public class InputKeyService extends AccessibilityService {
     private Map<Integer, String> appScancodes = Collections.emptyMap();
     private Map<Integer, String> holdAppKeys = Collections.emptyMap();
     private Map<Integer, String> holdAppScancodes = Collections.emptyMap();
-    /** restore_key_services was on when the config was read: this helper is noted for ServiceRepair. */
-    private boolean repairRecord;
-    /** consume_volume_keys: Volume Up/Down go to VolumeKeys instead of on to the firmware. */
-    private boolean consumeVolumeKeys;
-    /** Stops key filtering while a game controller is connected; null unless gamepad_passthrough and key_filter. */
-    private GamepadPassthrough gamepads;
 
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
-        // From config.xml's config.json.
         Config config = Config.load(this);
-        // restore_key_services: note that this helper runs, so Home can put it back after a force stop.
-        repairRecord = config.restoreKeyServices;
-        if (repairRecord) ServiceRepair.connected(this, getClass());
         inputKeycodes = config.inputKeycodes;
-        consumeVolumeKeys = config.consumeVolumeKeys;
         appKeys = RemoteKeys.parseAppKeys(config.appKeys);
         appScancodes = RemoteKeys.parseAppScancodes(config.appKeys);
         RemoteKeys.applyKeyFilter(this, config.keyFilter);
         holdAppKeys = RemoteKeys.parseHoldAppKeys(config.appKeys);
         holdAppScancodes = RemoteKeys.parseHoldAppScancodes(config.appKeys);
-        // gamepad_passthrough, off by default. Only with key_filter on: off, the service never filters keys.
-        if (config.gamepadPassthrough && config.keyFilter && gamepads == null) {
-            gamepads = new GamepadPassthrough(this);
-            gamepads.start();
-        }
     }
 
     private boolean isInputKey(int keyCode) {
@@ -62,7 +45,6 @@ public class InputKeyService extends AccessibilityService {
 
     @Override
     protected boolean onKeyEvent(KeyEvent event) {
-        if (consumeVolumeKeys && VolumeKeys.handle(this, event)) return true;
         // vPro: the owner's choice for this button in Launcher settings wins over config.xml app_keys.
         String chosen = ForkKeys.target(this, event.getKeyCode());
         if (chosen != null && RemoteKeys.handle(this, event, chosen, null)) return true;
@@ -81,19 +63,15 @@ public class InputKeyService extends AccessibilityService {
         return true;
     }
 
-    /** Unbound by Android: the user turned the helper off, so Home doesn't put it back (ServiceRepair). */
     @Override
     public boolean onUnbind(Intent intent) {
         RemoteKeys.release(this);
-        if (repairRecord) ServiceRepair.disconnected(this, getClass());
         return super.onUnbind(intent);
     }
 
     @Override
     public void onDestroy() {
         RemoteKeys.release(this);
-        if (gamepads != null) gamepads.stop();
-        if (consumeVolumeKeys) VolumeKeys.stop();
         super.onDestroy();
     }
 

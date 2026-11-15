@@ -25,7 +25,7 @@ import java.util.Map;
  * Format, UTF-8 text: {@code vpro-order 1}, then {@code dock <comma-separated dock_apps>}, then optionally
  * {@code docked <n>}, then one tile key (component, flattened short) per line. {@code docked} says how many of the
  * first keys are in the dock, for fill_dock false, where an app the owner moved into the dock is not in dock_apps
- * (#499). Files without it (older launchers) leave the dock to dock_apps; an older launcher reads the line as a key
+ *. Files without it (older launchers) leave the dock to dock_apps; an older launcher reads the line as a key
  * that matches no tile.
  */
 final class Order {

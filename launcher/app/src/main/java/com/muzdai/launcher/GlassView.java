@@ -22,7 +22,7 @@ public class GlassView extends View {
     private final RectF rect = new RectF();
     private final float density;
     private float radius;
-    /** Glow colour as 0xRRGGBB: white normally, an app's colour with app_glow or the cinematic shelf. */
+    /** Glow colour as 0xRRGGBB: white normally, blue in reorder mode. */
     private int glowRgb = 0xFFFFFF;
     /** Glow strength: the white glow stays faint, a coloured one needs more alpha to read as warm light. */
     private int glowAlpha = 0x30;

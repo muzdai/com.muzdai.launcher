@@ -29,7 +29,7 @@ import java.util.Set;
  * The clock screensaver's scene (layout dream_clock): the thin clock and date on black over a slow ambient
  * glow. Every minute the clock drifts to a new spot and the glow shifts colour, so nothing burns in; a
  * ClockRefresh keeps its TextClocks current where Android would not.
- * Shared by ClockDream (the system screensaver) and ClockActivity (Home left idle).
+ * Used by ClockDream (the system screensaver).
  */
 final class ClockScene {
 

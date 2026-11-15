@@ -78,12 +78,10 @@ final class AppLibraryDialog {
     private final Predicate<String> onHome;
     private final Runnable changed;
     private final LinearLayout panel;
-    private final boolean reducedMotion;
     private final boolean selectionMode;
     /** library_ok_opens without app_library_selection: OK opens every app, Add to Home is in the hold menu. */
     private final boolean okOpens;
     private final boolean animations;
-    private final boolean rtl;
     private TextView instructions;
     private int totalApps;
     final PopupWindow popup;
@@ -147,11 +145,9 @@ final class AppLibraryDialog {
      *  setups are unaffected. See LibraryApps.excludedFromCatalog(). */
     private final Set<String> excludedApps;
 
-    AppLibraryDialog(Activity activity, boolean animations, boolean reducedMotion, boolean selectionMode, boolean okOpens, Predicate<String> onHome, Runnable changed, Runnable dismissed, Set<String> excludedApps) {
+    AppLibraryDialog(Activity activity, boolean animations, boolean selectionMode, boolean okOpens, Predicate<String> onHome, Runnable changed, Runnable dismissed, Set<String> excludedApps) {
         this.activity = activity;
         this.animations = animations;
-        this.rtl = activity.getResources().getBoolean(R.bool.rtl_app_grid);
-        this.reducedMotion = reducedMotion;
         this.selectionMode = selectionMode;
         this.okOpens = okOpens && !selectionMode;
         this.onHome = onHome;
@@ -160,7 +156,7 @@ final class AppLibraryDialog {
         this.excludedApps = excludedApps;
         density = activity.getResources().getDisplayMetrics().density;
         panel = new LinearLayout(activity);
-        panel.setLayoutDirection(rtl ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
+        panel.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(12), dp(8), dp(12), dp(12));
         panel.setBackgroundResource(R.drawable.glass_panel);
@@ -206,7 +202,7 @@ final class AppLibraryDialog {
             activity.getWindowManager().updateViewLayout(container, params);
         }
         panel.setAlpha(0f);
-        panel.animate().alpha(1f).setDuration(reducedMotion ? Motion.REDUCED_MS : 180).start();
+        panel.animate().alpha(1f).setDuration(180).start();
     }
 
     /** Called by the activity's existing package receiver; an uninstall cannot leave a stale action. */
@@ -306,7 +302,7 @@ final class AppLibraryDialog {
 
     private static String loadLabel(PackageManager pm, ResolveInfo app) {
         String pkg = app.activityInfo.packageName;
-        try { return Cards.cleanLabel(String.valueOf(app.loadLabel(pm)), pkg); }
+        try { return AppLabels.clean(String.valueOf(app.loadLabel(pm)), pkg); }
         catch (RuntimeException unavailable) { return pkg; }
     }
 
@@ -365,19 +361,13 @@ final class AppLibraryDialog {
         header.setPadding(dp(12), dp(4), dp(8), dp(4));
         TextView title = text(activity.getString(R.string.app_library), 22, Color.WHITE);
         header.addView(title, new LinearLayout.LayoutParams(0, dp(36), 1));
-        title.setGravity(Gravity.CENTER_VERTICAL | (rtl ? Gravity.RIGHT : Gravity.LEFT));
+        title.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
         title.setSingleLine(true);
         title.setEllipsize(TextUtils.TruncateAt.END);
         TextView count = text(activity.getResources().getQuantityString(
                 R.plurals.library_app_count, totalApps, totalApps), 13, 0xA6FFFFFF);
         count.setSingleLine(true);
         header.addView(count, new LinearLayout.LayoutParams(-2, -2));
-        // The launcher has no global supportsRtl: explicitly mirror this horizontal row.
-        if (rtl) {
-            header.removeView(count);
-            header.addView(count, 0);
-            count.setPadding(0, 0, dp(12), 0);
-        }
         panel.addView(header, new LinearLayout.LayoutParams(-1, dp(44)));
         instructions = text(hint(false), 13, 0xBBFFFFFF);
         instructions.setSingleLine(true);
@@ -397,11 +387,9 @@ final class AppLibraryDialog {
         shelf.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
         shelf.setClipChildren(false);
         RecyclerView list = new RecyclerView(activity);
-        list.setLayoutDirection(rtl ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
+        list.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
         catalog = list;
-        list.setLayoutManager(new LinearLayoutManager(activity, RecyclerView.HORIZONTAL, false) {
-            @Override protected boolean isLayoutRTL() { return rtl; }
-        });
+        list.setLayoutManager(new LinearLayoutManager(activity, RecyclerView.HORIZONTAL, false));
         list.setItemAnimator(null);
         list.setOverScrollMode(View.OVER_SCROLL_NEVER);
         list.setClipToPadding(false);
@@ -419,8 +407,7 @@ final class AppLibraryDialog {
             @Override public float getValue(View view) { return view.getTranslationX() + scrollOffset; }
             @Override public void setValue(View view, float value) { view.setTranslationX(value - scrollOffset); }
         });
-        if (reducedMotion) Motion.reduce(spring);
-        else spring.setSpring(new SpringForce().setStiffness(260f).setDampingRatio(0.58f));
+        spring.setSpring(new SpringForce().setStiffness(260f).setDampingRatio(0.58f));
         list.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                 scrollOffset += dx;
@@ -473,10 +460,7 @@ final class AppLibraryDialog {
             if (holder != null) {
                 View card = holder.itemView;
                 RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) card.getLayoutParams();
-                selectedOffset = rtl
-                        ? catalog.getWidth() - catalog.getPaddingRight()
-                            - catalog.getLayoutManager().getDecoratedRight(card) - params.rightMargin
-                        : catalog.getLayoutManager().getDecoratedLeft(card)
+                selectedOffset = catalog.getLayoutManager().getDecoratedLeft(card)
                             - params.leftMargin - catalog.getPaddingLeft();
             }
             // Advance through missing shortcuts instead of following the newly checked app
@@ -502,10 +486,7 @@ final class AppLibraryDialog {
             if (holder != null) {
                 View card = holder.itemView;
                 RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) card.getLayoutParams();
-                selectedOffset = rtl
-                        ? catalog.getWidth() - catalog.getPaddingRight()
-                            - catalog.getLayoutManager().getDecoratedRight(card) - params.rightMargin
-                        : catalog.getLayoutManager().getDecoratedLeft(card)
+                selectedOffset = catalog.getLayoutManager().getDecoratedLeft(card)
                             - params.leftMargin - catalog.getPaddingLeft();
             }
         }
@@ -615,7 +596,7 @@ final class AppLibraryDialog {
         menuPanel.setScaleY(0.92f);
         menuPanel.setTranslationY(-dp(8));
         menu.showAtLocation(activity.getWindow().getDecorView(), Gravity.TOP | Gravity.START, x, y);
-        menuPanel.animate().alpha(1f).scaleY(1f).translationY(0f).setDuration(reducedMotion ? Motion.REDUCED_MS : 220)
+        menuPanel.animate().alpha(1f).scaleY(1f).translationY(0f).setDuration(220)
                 .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).start();
         rows.getChildAt(0).requestFocus();
     }
@@ -640,8 +621,8 @@ final class AppLibraryDialog {
     private TextView text(String value, int size, int color) {
         TextView view = new TextView(activity);
         view.setText(value);
-        view.setTextDirection(rtl ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_FIRST_STRONG);
-        view.setGravity(rtl ? Gravity.RIGHT : Gravity.LEFT);
+        view.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+        view.setGravity(Gravity.LEFT);
         view.setTextSize(size);
         view.setTextColor(color);
         view.setTypeface(UiFont.get(activity, R.string.font_medium));
@@ -726,8 +707,8 @@ final class AppLibraryDialog {
                 int index = holder.getBindingAdapterPosition();
                 return event.getAction() == KeyEvent.ACTION_DOWN && (key == KeyEvent.KEYCODE_DPAD_UP
                         || key == KeyEvent.KEYCODE_DPAD_DOWN
-                        || (rtl ? key == KeyEvent.KEYCODE_DPAD_RIGHT : key == KeyEvent.KEYCODE_DPAD_LEFT) && index == 0
-                        || (rtl ? key == KeyEvent.KEYCODE_DPAD_LEFT : key == KeyEvent.KEYCODE_DPAD_RIGHT) && index == apps.size() - 1);
+                        || key == KeyEvent.KEYCODE_DPAD_LEFT && index == 0
+                        || key == KeyEvent.KEYCODE_DPAD_RIGHT && index == apps.size() - 1);
             });
         }
         @Override public int getItemCount() { return apps.size(); }

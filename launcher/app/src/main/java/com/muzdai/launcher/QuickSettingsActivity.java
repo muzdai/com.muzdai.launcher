@@ -5,8 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 
 /**
- * What the remote's Settings button and the on-screen gear open (app_keys 83, settings_key_panel). It used to be a
- * small panel of shortcuts; now it goes straight to Launcher settings, whose first row is the TV's own settings.
+ * What the remote's Settings button and the on-screen gear open (app_keys 83). It goes straight to Launcher settings, whose first row is the TV's own settings.
  * Through Home, so Home rebuilds with the new choices when the settings close.
  */
 public final class QuickSettingsActivity extends Activity {

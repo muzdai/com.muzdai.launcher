@@ -1,7 +1,7 @@
 package com.muzdai.launcher;
 
 /**
- * How big a wallpaper may be and what size it is decoded at (#166). A 1 GB TV cannot afford a
+ * How big a wallpaper may be and what size it is decoded at. A 1 GB TV cannot afford a
  * picture decoded at full size: a 65535x2159 image is about 283 MB even in RGB_565.
  */
 final class WallpaperSize {

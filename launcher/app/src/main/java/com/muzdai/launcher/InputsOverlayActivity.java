@@ -2,7 +2,6 @@ package com.muzdai.launcher;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
-import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.media.tv.TvContract;
@@ -28,22 +27,15 @@ import java.util.Set;
 
 /**
  * vPro: the Inputs list as a translucent glass panel over whatever is on screen, for the remote's
- * Input button ({@code app_keys} action {@code inputs_overlay}, InputKeyService or HomeKeyService). Unlike the
+ * Input button ({@code app_keys} action {@code inputs_overlay}, InputKeyService). Unlike the
  * stock {@code inputs} action it does not bring Home to the front: the app or HDMI picture keeps running
  * behind, Back closes the panel, and pressing Input again closes it too.
  *
  * It lists what the Home dropdown lists on a TV with a TvInputManager: HDMI ports (a CEC device takes its
- * port's row, names from Settings > Inputs first), the other passthrough inputs and Live TV. The vendor
- * routes of the Home dropdown (Coocaa sources, a source panel, input_action, input_uri_scheme) are not
- * handled here; on such sets keep the stock {@code inputs} action.
+ * port's row, names from Settings > Inputs first), the other passthrough inputs and Live TV.
  */
 public final class InputsOverlayActivity extends Activity {
     private String liveTvPkg = "";
-
-    @Override
-    protected void attachBaseContext(android.content.Context base) {
-        super.attachBaseContext(LauncherLocale.wrap(base));
-    }
 
     @Override
     protected void onCreate(Bundle state) {
@@ -148,20 +140,19 @@ public final class InputsOverlayActivity extends Activity {
                     }
                 }
                 if (!info.isPassthroughInput() || info.isHidden(this)) continue;
-                if (Integer.valueOf(-1).equals(InputSources.mapped(cfg.inputSources, info.getId()))) continue;
                 if (info.getParentId() != null && ids.contains(info.getParentId())) continue;
                 CharSequence l = info.loadLabel(this);
                 String label = l == null ? info.getId() : l.toString();
                 boolean hdmi = info.getType() == TvInputInfo.TYPE_HDMI;
                 if (hdmi && !label.toUpperCase(Locale.ROOT).contains("HDMI")) label = "HDMI " + label;
-                CharSequence custom = InputNames.tidy(info.loadCustomLabel(this));
+                CharSequence custom = info.loadCustomLabel(this);
                 boolean named = custom != null && custom.length() > 0 && !custom.toString().equals(label);
                 if (!hdmi && rows.getChildCount() > 0 && !sawNonHdmi) addSeparator(rows);
                 if (!hdmi) sawNonHdmi = true;
                 List<TvInputInfo> devices = cec.get(info.getId());
                 if (devices != null) {
                     for (TvInputInfo device : devices) {
-                        CharSequence name = InputNames.tidy(device.loadCustomLabel(this));
+                        CharSequence name = device.loadCustomLabel(this);
                         if (name == null || name.length() == 0) name = named ? custom : device.loadLabel(this);
                         String deviceLabel = name == null || name.length() == 0 ? label : name + " · " + label;
                         final String deviceId = device.getId();
@@ -194,10 +185,7 @@ public final class InputsOverlayActivity extends Activity {
                     .setPackage(liveTvPkg);
             if (tuned.resolveActivity(getPackageManager()) != null) return tuned;
         }
-        Intent i = getPackageManager().getLeanbackLaunchIntentForPackage(liveTvPkg);
-        if (i != null || cfg.liveTvAction == null || cfg.liveTvAction.isEmpty()) return i;
-        Intent byAction = new Intent(cfg.liveTvAction).setPackage(liveTvPkg);
-        return getPackageManager().resolveActivity(byAction, 0) != null ? byAction : null;
+        return getPackageManager().getLeanbackLaunchIntentForPackage(liveTvPkg);
     }
 
     /** ACTION_VIEW on the input's channel URI, aimed at the Live TV app first (as MainActivity.openInput). */

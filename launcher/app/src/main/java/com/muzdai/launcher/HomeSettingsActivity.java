@@ -11,11 +11,6 @@ import android.widget.Toast;
  *  on Android 14 (permissioncontroller), so this stays behind it as a black backdrop: over Home, its text sat on the
  *  tiles. */
 public class HomeSettingsActivity extends Activity {
-    @Override
-    protected void attachBaseContext(android.content.Context base) {
-        super.attachBaseContext(LauncherLocale.wrap(base));   // locale
-    }
-
     private boolean left;
 
     @Override

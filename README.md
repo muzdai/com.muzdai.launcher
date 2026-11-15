@@ -65,8 +65,8 @@ adb shell settings put secure accessibility_enabled 1
 ## System app (Magisk)
 
 `magisk/build-module.sh <signed apk>` builds a Magisk module that installs the launcher into `/system/priv-app`
-with its privileged permissions (`DELETE_PACKAGES`, `WRITE_SECURE_SETTINGS`) allowlisted in
-`system/etc/permissions`. Install it with `magisk --install-module` and reboot. Later versions install over it with
+with its privileged permission `DELETE_PACKAGES` allowlisted in `system/etc/permissions` (the allowlist still
+lists `WRITE_SECURE_SETTINGS`, which the launcher no longer requests; an unused entry is harmless). Install it with `magisk --install-module` and reboot. Later versions install over it with
 `adb install -r`. Every privileged permission the manifest asks for must be in the allowlist, or a TV with
 `ro.control_privapp_permissions=enforce` will not boot. See `docs/RESTORE.md` for the state of the TV and how to
 roll back.

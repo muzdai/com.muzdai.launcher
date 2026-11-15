@@ -10,47 +10,28 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class GridNavigationTest {
-    @Test public void hebrewDockStartsOnTheRightAndStopsAtTheLeft() {
-        assertTrue(GridNavigation.atHorizontalEdge(0, 11, 4, true, false));
-        assertFalse(GridNavigation.atHorizontalEdge(0, 11, 4, true, true));
-        assertTrue(GridNavigation.atHorizontalEdge(3, 11, 4, true, true));
-        assertFalse(GridNavigation.atHorizontalEdge(3, 11, 4, true, false));
-    }
-
-    @Test public void incompleteHebrewLastRowDoesNotWrapIntoEmptySpace() {
-        assertTrue(GridNavigation.atHorizontalEdge(8, 11, 4, true, false));
-        assertTrue(GridNavigation.atHorizontalEdge(10, 11, 4, true, true));
-        assertFalse(GridNavigation.atHorizontalEdge(9, 11, 4, true, true));
-        assertFalse(GridNavigation.atHorizontalEdge(9, 11, 4, true, false));
-    }
-
-    @Test public void originalLeftToRightBoundariesArePreserved() {
-        assertTrue(GridNavigation.atHorizontalEdge(0, 11, 4, false, true));
-        assertTrue(GridNavigation.atHorizontalEdge(3, 11, 4, false, false));
-        assertTrue(GridNavigation.atHorizontalEdge(10, 11, 4, false, false));
-        assertFalse(GridNavigation.atHorizontalEdge(1, 11, 4, false, true));
-        assertFalse(GridNavigation.atHorizontalEdge(1, 11, 4, false, false));
+    @Test public void rowEndsStopFocus() {
+        assertTrue(GridNavigation.atHorizontalEdge(0, 11, 4, true));
+        assertTrue(GridNavigation.atHorizontalEdge(3, 11, 4, false));
+        assertTrue(GridNavigation.atHorizontalEdge(10, 11, 4, false));
+        assertFalse(GridNavigation.atHorizontalEdge(1, 11, 4, true));
+        assertFalse(GridNavigation.atHorizontalEdge(1, 11, 4, false));
     }
 
     @Test public void singleColumnHasBothHorizontalEdges() {
-        assertTrue(GridNavigation.atHorizontalEdge(1, 3, 1, true, true));
-        assertTrue(GridNavigation.atHorizontalEdge(1, 3, 1, true, false));
-        assertTrue(GridNavigation.atHorizontalEdge(1, 3, 1, false, true));
-        assertTrue(GridNavigation.atHorizontalEdge(1, 3, 1, false, false));
+        assertTrue(GridNavigation.atHorizontalEdge(1, 3, 1, true));
+        assertTrue(GridNavigation.atHorizontalEdge(1, 3, 1, false));
     }
 
-    @Test public void horizontalEdgesMatchExplicitRowsAcrossColumnCountsAndDirections() {
+    @Test public void horizontalEdgesMatchExplicitRowsAcrossColumnCounts() {
         for (GridCase grid : grids()) {
-            for (boolean rtl : new boolean[] {false, true}) {
-                for (int position = 0; position < grid.count; position++) {
-                    for (boolean left : new boolean[] {false, true}) {
-                        boolean expected = isPhysicalEdge(grid.rows, position, rtl, left);
-                        String message = "count=" + grid.count + ", columns=" + grid.columns
-                                + ", position=" + position + ", rtl=" + rtl
-                                + ", direction=" + (left ? "left" : "right");
-                        assertEquals(message, expected, GridNavigation.atHorizontalEdge(
-                                position, grid.count, grid.columns, rtl, left));
-                    }
+            for (int position = 0; position < grid.count; position++) {
+                for (boolean left : new boolean[] {false, true}) {
+                    boolean expected = isEdge(grid.rows, position, left);
+                    String message = "count=" + grid.count + ", columns=" + grid.columns
+                            + ", position=" + position + ", direction=" + (left ? "left" : "right");
+                    assertEquals(message, expected, GridNavigation.atHorizontalEdge(
+                            position, grid.count, grid.columns, left));
                 }
             }
         }
@@ -67,41 +48,16 @@ public class GridNavigationTest {
             assertEquals("empty dock position=" + position, dockApps - 1,
                     DockSlots.focusable(position, dockApps, emptySlots));
         }
-        assertEquals("occupied dock position remains focused", 0,
-                DockSlots.focusable(0, dockApps, emptySlots));
-        assertEquals("first grid app remains focused", dockApps + emptySlots,
-                DockSlots.focusable(dockApps + emptySlots, dockApps, emptySlots));
+        assertEquals(0, DockSlots.focusable(0, dockApps, emptySlots));
+        assertEquals(dockApps + emptySlots, DockSlots.focusable(dockApps + emptySlots, dockApps, emptySlots));
 
-        for (boolean rtl : new boolean[] {false, true}) {
-            boolean dockStartIsLeft = !rtl;
-            assertTrue("dock count=" + dockApps + ", columns=" + columns
-                            + ", position=0, rtl=" + rtl + ", direction="
-                            + (dockStartIsLeft ? "left" : "right"),
-                    GridNavigation.atHorizontalEdge(0, dockApps, columns, rtl, dockStartIsLeft));
-            assertFalse("dock count=" + dockApps + ", columns=" + columns
-                            + ", position=0, rtl=" + rtl + ", direction="
-                            + (dockStartIsLeft ? "right" : "left"),
-                    GridNavigation.atHorizontalEdge(0, dockApps, columns, rtl, !dockStartIsLeft));
-            assertTrue("dock count=" + dockApps + ", columns=" + columns
-                            + ", position=1, rtl=" + rtl + ", direction="
-                            + (dockStartIsLeft ? "right" : "left"),
-                    GridNavigation.atHorizontalEdge(1, dockApps, columns, rtl, !dockStartIsLeft));
-            assertFalse("dock count=" + dockApps + ", columns=" + columns
-                            + ", position=1, rtl=" + rtl + ", direction="
-                            + (dockStartIsLeft ? "left" : "right"),
-                    GridNavigation.atHorizontalEdge(1, dockApps, columns, rtl, dockStartIsLeft));
-
-            // MainActivity must pass the reduced dock count to keep the outward dock edge here.
-            // This helper contract does not exercise that wiring.
-            assertTrue("grid count=" + totalSlots + ", columns=" + columns
-                            + ", position=" + columns + ", rtl=" + rtl
-                            + ", direction=" + (dockStartIsLeft ? "left" : "right"),
-                    GridNavigation.atHorizontalEdge(columns, totalSlots, columns, rtl, dockStartIsLeft));
-            assertFalse("grid count=" + totalSlots + ", columns=" + columns
-                            + ", position=" + columns + ", rtl=" + rtl
-                            + ", direction=" + (dockStartIsLeft ? "right" : "left"),
-                    GridNavigation.atHorizontalEdge(columns, totalSlots, columns, rtl, !dockStartIsLeft));
-        }
+        assertTrue(GridNavigation.atHorizontalEdge(0, dockApps, columns, true));
+        assertFalse(GridNavigation.atHorizontalEdge(0, dockApps, columns, false));
+        assertTrue(GridNavigation.atHorizontalEdge(1, dockApps, columns, false));
+        assertFalse(GridNavigation.atHorizontalEdge(1, dockApps, columns, true));
+        // MainActivity must pass the reduced dock count to keep the outward dock edge here.
+        assertTrue(GridNavigation.atHorizontalEdge(columns, totalSlots, columns, true));
+        assertFalse(GridNavigation.atHorizontalEdge(columns, totalSlots, columns, false));
     }
 
     private static List<GridCase> grids() {
@@ -133,12 +89,9 @@ public class GridNavigationTest {
         }
     }
 
-    private static boolean isPhysicalEdge(List<List<Integer>> rows, int position,
-                                          boolean rtl, boolean left) {
+    private static boolean isEdge(List<List<Integer>> rows, int position, boolean left) {
         for (List<Integer> row : rows) {
-            int leftEdge = rtl ? row.get(row.size() - 1) : row.get(0);
-            int rightEdge = rtl ? row.get(0) : row.get(row.size() - 1);
-            if (position == (left ? leftEdge : rightEdge)) return true;
+            if (position == (left ? row.get(0) : row.get(row.size() - 1))) return true;
         }
         return false;
     }

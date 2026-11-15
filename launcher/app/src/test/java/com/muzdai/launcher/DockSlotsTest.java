@@ -12,14 +12,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class DockSlotsTest {
-    @Test public void dockRowIsTheFirstColumnsTilesOrEveryTileOfASingleRow() {
-        // #2428: the glass stays level with a dock tile, which advanced_effects no longer lifts.
-        assertTrue(DockSlots.inDockRow(true, false, 0, 6));
-        assertTrue(DockSlots.inDockRow(true, false, 5, 6));
-        assertFalse(DockSlots.inDockRow(true, false, 6, 6));
-        assertTrue(DockSlots.inDockRow(true, true, 40, 6));
-        assertFalse(DockSlots.inDockRow(false, false, 0, 6));
-        assertFalse(DockSlots.inDockRow(false, true, 0, 6));
+    @Test public void dockRowIsTheFirstColumnsTiles() {
+        // The glass stays level with a dock tile, which advanced_effects does not lift.
+        assertTrue(DockSlots.inDockRow(true, 0, 6));
+        assertTrue(DockSlots.inDockRow(true, 5, 6));
+        assertFalse(DockSlots.inDockRow(true, 6, 6));
+        assertFalse(DockSlots.inDockRow(false, 0, 6));
     }
 
     private static Set<String> set(String... keys) {
@@ -27,7 +25,7 @@ public class DockSlotsTest {
     }
 
     @Test public void anAppCarriedIntoTheDockStaysThere() {
-        // #499: Apple TV (not in dock_apps) carried into the 4th slot, YouTube carried out into the grid.
+        // Apple TV (not in dock_apps) carried into the 4th slot, YouTube carried out into the grid.
         List<String> keys = Arrays.asList("tivimate", "jellyfin", "iplayer", "appletv", "my5", "youtube");
         Set<String> dock = set("tivimate", "jellyfin", "iplayer", "appletv");
         assertEquals(keys, DockSlots.dockFirst(keys, 4, dock));
@@ -35,7 +33,7 @@ public class DockSlotsTest {
     }
 
     @Test public void aGridAppThatOnlySlidIntoAFreeSlotGoesBackToTheGrid() {
-        // #162: three dock apps and a free slot. Reorder mode shows no empty slot, so "my5" sits in the 4th place
+        // three dock apps and a free slot. Reorder mode shows no empty slot, so "my5" sits in the 4th place
         // without the owner putting it there; only a grid tile moved.
         List<String> keys = Arrays.asList("tivimate", "jellyfin", "iplayer", "my5", "vlc", "appletv");
         Set<String> dock = set("tivimate", "jellyfin", "iplayer");

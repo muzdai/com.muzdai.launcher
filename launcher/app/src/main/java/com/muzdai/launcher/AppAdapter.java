@@ -10,12 +10,9 @@ import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.PixelFormat;
-import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
@@ -37,7 +34,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,8 +41,7 @@ import java.util.Set;
 
 /**
  * App tiles. The first {@link MainActivity#COLUMNS} positions are the pinned dock (favourites, fixed order,
- * then empty slots up to a full row, see {@link DockSlots}), then the module cards the owner chose to show
- * (by label), the rest is alphabetical.
+ * then empty slots up to a full row, see {@link DockSlots}), the rest is alphabetical.
  */
 public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -66,7 +61,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     static final class Entry {
-        static final int APP = 0, HOME_SETTINGS = 1, CARD = 2, EMPTY = 3;
+        static final int APP = 0, HOME_SETTINGS = 1, EMPTY = 3;
 
         final int kind;
         final String label;
@@ -74,26 +69,18 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final String pkg;
         final Drawable banner;
         final Drawable icon;
-        /** Text under the tile when it is focused in the grid: the label, plus the caption for a card. */
-        final String name;
-        /** Ambient glow colour; 0 until sampled from the banner, or the card's accent from the start. */
-        int ambient;
-        /** uniform_tiles card fill, top and bottom colour; null until sampled from the icon. */
-        int[] backdrop;
 
         Entry(String label, ComponentName component, Drawable banner, Drawable icon) {
-            this(APP, label, component, banner, icon, null, 0);
+            this(APP, label, component, banner, icon);
         }
 
-        Entry(int kind, String label, ComponentName component, Drawable banner, Drawable icon, String caption, int accent) {
+        Entry(int kind, String label, ComponentName component, Drawable banner, Drawable icon) {
             this.kind = kind;
             this.label = label;
             this.component = component;
             this.pkg = component.getPackageName();
             this.banner = banner;
             this.icon = icon;
-            this.name = caption == null ? label : label + " \u00B7 " + caption;
-            this.ambient = accent;
         }
     }
 
@@ -184,12 +171,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final int dockSize;
     /** config dock_row: false makes the dock apps the first tiles of one plain grid (names shown, no empty slots). */
     private final boolean dockRow;
-    /** config single_row: tiles sit in one sideways row, each as wide as a grid column would be. */
-    private final boolean singleRow;
     /** config always_show_names: the alpha of an unfocused tile's name (0 hides it). */
     private final float restNameAlpha;
-    /** cinematic_home: only then does a launch record the last-opened app the shelf uses. */
-    private final boolean cinematic;
     /** Dock order (config.xml dock_apps). */
     private final List<String> favourites;
     /** Grid apps fill the dock slots dock_apps leaves free (config.xml, fill_dock). */
@@ -208,18 +191,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** Packages with a leanback entry at the last reload(): their tiles launch with the leanback category. */
     private Set<String> leanbackPackages = new HashSet<>();
     private final boolean showHomeSettings;
-    /** Calmer motion for weak GPUs (config.xml, reduced_motion): no overshoot, shorter fades. */
-    private final boolean reducedMotion;
-    /** The focus zoom may overshoot (config.xml, focus_overshoot). */
-    private final boolean focusOvershoot;
     /** Package to the action its tile sends instead of the start screen (config.xml, launch_actions). */
     private final Map<String, String> launchActions;
     /** Hold OK opens the activity's tile menu (config.xml, tile_menu); false opens App info, as before. */
     private final boolean tileMenu;
     /** Tile names and bundled banners that replace the app's own (config.xml, app_labels and app_banners). */
     private final Map<String, String> appLabels, appBanners;
-    /** Every app tile is its icon on a card tinted from that icon, never its banner (config.xml, uniform_tiles). */
-    private final boolean uniformTiles;
     /** Packages drawn from their icon and name even when they have a banner (config.xml icon_tiles). */
     private final Set<String> iconTiles;
     private final List<Entry> items = new ArrayList<>();
@@ -237,38 +214,29 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.advancedEffects = cfg.animations && cfg.advancedEffects;
         this.showHomeSettings = cfg.showHomeSettingsShortcut;
         this.showLibrary = LibraryApps.showPill(cfg.appLibrary, cfg.libraryButton, cfg.showLibraryPill);
-        this.reducedMotion = cfg.reducedMotion;
-        this.focusOvershoot = cfg.focusOvershoot;
         this.rowsBelowDock = cfg.rowsBelowDock;
         this.dockTitle = cfg.dockTitle;
         this.dockRow = cfg.dockRow;
-        this.singleRow = cfg.singleRow;
         this.restNameAlpha = cfg.alwaysShowNames ? 0.75f : 0f;
-        this.cinematic = cfg.cinematicHome;
         this.launchActions = cfg.launchActions;
         this.iconTiles = new HashSet<>(Arrays.asList(ctx.getResources().getStringArray(R.array.icon_tiles)));
         this.tileMenu = cfg.tileMenu;
         this.appLabels = cfg.appLabels;
         this.appBanners = cfg.appBanners;
-        this.uniformTiles = cfg.uniformTiles;
         // Tiles keep their identity across reload(), so a focused tile stays on its app instead of
         // its view being rebound to whatever app now sits in that slot.
         setHasStableIds(true);
     }
 
-    /**
-     * Rebuilds the tiles. A shown module card stands in for every tile of its package (same component,
-     * so focus follows it); hidden_apps wins over a card, and a card's package in dock_apps takes that slot.
-     */
-    void reload(List<Cards.Card> cards, List<ResolveInfo> leanback) {
+    /** Rebuilds the tiles from the TV's leanback apps (queried by MainActivity) and the library-added ones. */
+    void reload(List<ResolveInfo> leanback) {
         PackageManager pm = ctx.getPackageManager();
-        // The LEANBACK query is shared with the module-card check (MainActivity); copy it before adding
-        // library apps so the caller's list stays as it was.
+        // Copy before adding library apps so the caller's list stays as it was.
         List<ResolveInfo> found = new ArrayList<>(leanback);
         Set<String> tvPackages = new HashSet<>();
         for (ResolveInfo ri : found) if (ri.activityInfo != null) tvPackages.add(ri.activityInfo.packageName);
         leanbackPackages = tvPackages;
-        // Copy before merging: LibraryApps.load() may return an immutable empty set (#419).
+        // Copy before merging: LibraryApps.load() may return an immutable empty set.
         Set<String> added = new HashSet<>(LibraryApps.load(ctx));
         added.addAll(libraryPreload);
         Set<String> removed = LibraryApps.loadRemoved(ctx);
@@ -280,8 +248,6 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         && seen.add(ri.activityInfo.packageName)) found.add(ri);
             }
         }
-        Map<String, Cards.Card> cardByPkg = new HashMap<>();
-        for (Cards.Card c : cards) cardByPkg.put(c.pkg, c);
         List<Entry> fresh = new ArrayList<>();
         // Some system apps declare two leanback entry points under one name (Sony's Timers & Clock on the
         // BRAVIA VU31), which would show as two identical tiles: keep the first per package and label.
@@ -294,27 +260,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                             hidden.contains(pkg) || (homeDockOnly && !favourites.contains(pkg)),
                             added.contains(pkg), removed.contains(pkg))) continue;
             ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
-            Cards.Card card = cardByPkg.get(pkg);
-            if (card != null && !card.component.equals(component)) continue;   // the card stands in for this tile
-            // Same cleaner as the card prompt: an app label with a bidi override or line separator must not
-            // redraw the tile name as something else (#117).
-            String label = card != null ? card.label : Cards.cleanLabel(
+            // An app label with a bidi override or line separator must not redraw the tile name as something else.
+            String label = AppLabels.clean(
                     appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm)), pkg);
             if (!seen.add(pkg + '\n' + label)) continue;
-            Drawable banner = null;
-            // uniform_tiles draws the icon, so an app's banner is never loaded. A module card keeps its banner.
-            if (!(uniformTiles && card == null)) {
-                banner = bundledBanner(appBanners.get(pkg));
-                if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(ri.loadIcon(pm)) : loadBanner(pm, ri);
-            }
-            // The icon is only drawn (and sampled for the glow) when there is no banner, so a tile with a
-            // banner skips loading and decoding it.
+            Drawable banner = bundledBanner(appBanners.get(pkg));
+            if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(ri.loadIcon(pm)) : loadBanner(pm, ri);
+            // The icon is only drawn when there is no banner, so a tile with a banner skips loading and decoding it.
             Drawable icon = banner == null ? ri.loadIcon(pm) : null;
-            if (card != null) {
-                fresh.add(new Entry(Entry.CARD, label, component, banner, icon, card.caption, card.accent));
-            } else {
-                fresh.add(new Entry(label, component, banner, icon));
-            }
+            fresh.add(new Entry(label, component, banner, icon));
         }
         Collections.sort(fresh, (a, b) -> {
             // The owner's own order first; tiles it does not know (new installs) follow by the rule below.
@@ -326,9 +280,6 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 if (fb < 0) return -1;
                 return Integer.compare(fa, fb);
             }
-            // Cards come right after the configured dock apps, before the alphabetical grid.
-            boolean ca = a.kind == Entry.CARD, cb = b.kind == Entry.CARD;
-            if (ca != cb) return ca ? -1 : 1;
             return a.label.compareToIgnoreCase(b.label);
         });
         // Retain the optional Default-home tile until dependent tile-ordering work is merged.
@@ -336,14 +287,14 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 && pm.resolveActivity(new Intent(Settings.ACTION_HOME_SETTINGS), 0) != null) {
             fresh.add(new Entry(Entry.HOME_SETTINGS, ctx.getString(R.string.home_settings),
                     new ComponentName(ctx, HomeSettingsActivity.class), null,
-                    ctx.getDrawable(R.drawable.ic_home_settings), null, 0));
+                    ctx.getDrawable(R.drawable.ic_home_settings)));
         }
         docked = 0;
         while (docked < fresh.size() && isDocked(fresh.get(docked))) docked++;
         emptySlots = dockRow && !reordering && !homeDockOnly ? DockSlots.empty(docked, dockSize, fresh.size(), fillDock) : 0;
         for (int i = 0; i < emptySlots; i++) {
             fresh.add(docked + i, new Entry(Entry.EMPTY, "", new ComponentName(ctx, "empty-dock-slot-" + i),
-                    null, null, null, 0));
+                    null, null));
         }
         items.clear();
         items.addAll(fresh);
@@ -437,16 +388,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             v.setPadding(v.getPaddingLeft(), pad, v.getPaddingRight(), pad);
         }
         name.setLayoutParams(nameLp);
-        // A sideways row would stretch a match_parent item across the whole screen: give it a grid column's width.
-        if (singleRow) v.getLayoutParams().width = inner / dockSize;
-        if (uniformTiles) {
-            // tvOS-style tile: a large centred mark, no caption inside the card.
-            View icon = v.findViewById(R.id.icon);
-            FrameLayout.LayoutParams iconLp = (FrameLayout.LayoutParams) icon.getLayoutParams();
-            iconLp.width = iconLp.height = Math.round(h * ICON_SHARE);
-            iconLp.bottomMargin = 0;
-            icon.setLayoutParams(iconLp);
-        } else if (h < Math.round(DESIGN_H_DP * density)) {
+        if (h < Math.round(DESIGN_H_DP * density)) {
             // Shrunk tiles (e.g. 5 or 6 columns): scale icon and bottom margin proportionally with tile height so the label does not overlap the icon.
             View icon = v.findViewById(R.id.icon);
             FrameLayout.LayoutParams iconLp = (FrameLayout.LayoutParams) icon.getLayoutParams();
@@ -457,7 +399,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             View label = v.findViewById(R.id.label);
             label.setPadding(label.getPaddingLeft(), label.getPaddingTop(), label.getPaddingRight(), Math.round(4f * density));
         }
-        return new Holder(v, listener, animations, advancedEffects, reducedMotion, restNameAlpha, focusOvershoot);
+        return new Holder(v, listener, animations, advancedEffects, restNameAlpha);
     }
 
     @Override
@@ -479,10 +421,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
-        h.name.setText(e.name);
+        h.name.setText(e.label);
         // The dock has no labels, unless always_show_names asks for them (DockDecoration then makes room in the band).
-        // In a single row every tile is the dock's kind: the big title above names it.
-        boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
+        boolean dockKind = DockSlots.inDockRow(dockRow, position, dockSize);
         h.name.setVisibility(dockKind && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE);
         h.inDock = dockKind;
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
@@ -496,10 +437,6 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // A fully opaque banner covers the whole card (centerCrop), so the card's own fill under it is drawn for
         // nothing on every frame; keep it under banners with transparent parts and under icon tiles.
         h.card.setBackground(e.banner != null && e.banner.getOpacity() == PixelFormat.OPAQUE ? null : h.cardBackground);
-        if (uniformTiles && e.banner == null) {
-            if (e.backdrop == null) e.backdrop = backdrop(e.icon, ambientColorAt(position));
-            h.card.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, e.backdrop));
-        }
         if (e.banner != null) {
             h.banner.setImageDrawable(e.banner);
             h.banner.setVisibility(View.VISIBLE);
@@ -511,7 +448,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             h.icon.setImageDrawable(e.icon);
             h.icon.setVisibility(View.VISIBLE);
             h.label.setText(e.label);
-            h.label.setVisibility(uniformTiles ? View.GONE : View.VISIBLE);
+            h.label.setVisibility(View.VISIBLE);
         }
         h.card.setOnClickListener(v -> launch(e));
         h.card.setOnLongClickListener(v -> {
@@ -530,7 +467,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         });
     }
 
-    /** Opens the tile's activity by explicit component, with no extras: a card can name nothing else. */
+    /** Opens the tile's activity by explicit component, with no extras. */
     @SuppressWarnings("deprecation")
     private void launch(Entry e) {
         if (e.kind == Entry.HOME_SETTINGS) {
@@ -558,8 +495,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         try {
             ctx.startActivity(i);
-            if (cinematic) LastOpened.record(ctx, e.pkg);
-            if (advancedEffects && !reducedMotion && ctx instanceof Activity) {
+            if (advancedEffects && ctx instanceof Activity) {
                 ((Activity) ctx).overridePendingTransition(R.anim.app_open_enter, R.anim.app_open_exit);
             }
         } catch (Exception ex) {
@@ -596,11 +532,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     /**
      * A tile in the dock: one of the first savedDocked tiles of the saved order when one was recorded, so an app
-     * the owner moved into the dock stays there (#499); else a dock_apps entry.
+     * the owner moved into the dock stays there; else a dock_apps entry.
      */
     private boolean isDocked(Entry e) {
         // vPro, home_dock_only: Home is the dock, so every app on it is a dock app.
-        if (homeDockOnly) return e.kind == Entry.APP || e.kind == Entry.CARD;
+        if (homeDockOnly) return e.kind == Entry.APP;
         if (savedDocked < 0) return favourites.contains(e.pkg);
         Integer rank = savedRanks.get(e.component.flattenToShortString());
         return rank != null && rank < savedDocked;
@@ -680,230 +616,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         return position >= 0 && position < items.size() ? items.get(position).pkg : null;
     }
 
-    /** The tile's artwork, its banner or else its icon, for the cinematic shelf's backdrop (HeroArt). */
-    Drawable artworkAt(int position) {
-        if (position < 0 || position >= items.size()) return null;
-        Entry e = items.get(position);
-        return e.banner != null ? e.banner : e.icon;
-    }
-
     float focusScale() {
         return !animations ? 1f : advancedEffects ? 1.12f : 1.10f;
-    }
-
-    /** A vivid colour sampled from the app's banner (or icon), cached per entry; a card's accent when it set one. */
-    int ambientColorAt(int position) {
-        if (position < 0 || position >= items.size()) return 0xFF444444;
-        Entry e = items.get(position);
-        if (e.ambient == 0) {
-            e.ambient = uniformTiles && e.banner == null ? dominantColor(e.icon) : vividColor(e.banner != null ? e.banner : e.icon);
-        }
-        return e.ambient;
-    }
-
-    /** Share of the tile height the icon takes in uniform_tiles mode (onCreateViewHolder). */
-    private static final float ICON_SHARE = 0.62f;
-
-    /**
-     * The colour covering most of an icon, for a card that should read as that app: a small saturated badge
-     * (a red "new" corner on a blue icon) must not win, as it can with {@link #vividColor}. Grey if none.
-     */
-    private static int dominantColor(Drawable live) {
-        if (live == null) return 0xFF6E6E73;
-        Drawable d = live.getConstantState() != null ? live.getConstantState().newDrawable().mutate() : live;
-        Rect saved = new Rect(d.getBounds());
-        int n = 24;
-        Bitmap bmp = Bitmap.createBitmap(n, n, Bitmap.Config.ARGB_8888);
-        d.setBounds(0, 0, n, n);
-        d.draw(new Canvas(bmp));
-        d.setBounds(saved);
-        float[] weight = new float[12];
-        float[][] sum = new float[12][3];
-        float[] hsv = new float[3];
-        float totalWeight = 0;
-        for (int y = 0; y < n; y++) {
-            for (int x = 0; x < n; x++) {
-                int p = bmp.getPixel(x, y);
-                if (Color.alpha(p) < 128) continue;
-                Color.colorToHSV(p, hsv);
-                if (hsv[1] < 0.3f || hsv[2] < 0.25f) continue;   // white, grey and black carry no hue
-                int bin = (int) (hsv[0] / 30f) % 12;
-                float w = hsv[1] * hsv[2];
-                weight[bin] += w;
-                totalWeight += w;
-                sum[bin][0] += Color.red(p) * w;
-                sum[bin][1] += Color.green(p) * w;
-                sum[bin][2] += Color.blue(p) * w;
-            }
-        }
-        bmp.recycle();
-        if (totalWeight < n * n * 0.03f) return 0xFF6E6E73;   // a monochrome icon, like a grey gear
-        int best = 0;
-        for (int i = 1; i < 12; i++) if (weight[i] > weight[best]) best = i;
-        if (weight[best] < n * n * 0.03f) {
-            // Multicolored icon without a single dominant hue: pick its most vivid colour
-            return vividColor(live);
-        }
-        float w = weight[best];
-        return Color.rgb((int) (sum[best][0] / w), (int) (sum[best][1] / w), (int) (sum[best][2] / w));
-    }
-
-    /**
-     * The uniform tile's fill. Where the icon sits on a flat colour of its own (a white or coloured rounded
-     * square), the card takes that colour, so the mark reads as filling the tile as on tvOS. Otherwise a
-     * gradient of the icon's main colour, deepened so the mark stands out. The card clips the corners.
-     */
-    private static int[] backdrop(Drawable live, int fallback) {
-        int[] plate = iconPlate(live);
-        if (plate != null) return plate;
-        float[] hsv = new float[3];
-        Color.colorToHSV(fallback, hsv);
-        // Yellow darkened turns olive: lean it to amber instead.
-        if (hsv[0] > 42f && hsv[0] < 70f && hsv[1] > 0.3f) hsv[0] = 36f;
-        hsv[2] = Math.min(hsv[2], 0.62f);
-        int top = Color.HSVToColor(hsv);
-        hsv[2] *= 0.6f;
-        return new int[]{top, Color.HSVToColor(hsv)};
-    }
-
-    /**
-     * The plate an icon's artwork sits on (a flat or vertically graded rounded square), carried out to the
-     * card's top and bottom edges so the mark reads as filling the tile; null when the icon has no
-     * opaque plate (a bare mark on transparency).
-     */
-    private static int[] iconPlate(Drawable live) {
-        if (live == null) return null;
-        Drawable d = live.getConstantState() != null ? live.getConstantState().newDrawable().mutate() : live;
-        Rect saved = new Rect(d.getBounds());
-        int n = 48;
-        Bitmap bmp = Bitmap.createBitmap(n, n, Bitmap.Config.ARGB_8888);
-        d.setBounds(0, 0, n, n);
-        d.draw(new Canvas(bmp));
-        d.setBounds(saved);
-        // Just inside a rounded square's corners; one side may go a step further in, past a corner badge.
-        // An icon padded on both sides is a small plate in the middle, which no fill would meet.
-        int topRow = 7, bottomRow = n - 8;
-        int a = plateColor(bmp, topRow, n), b = plateColor(bmp, bottomRow, n);
-        if (a == 0) {
-            for (int r : new int[]{5, 6, 4, 10}) {
-                int c = plateColor(bmp, r, n);
-                if (c != 0) { a = c; topRow = r; break; }
-            }
-        }
-        if (b == 0) {
-            for (int r : new int[]{n - 6, n - 7, n - 5, n - 11}) {
-                int c = plateColor(bmp, r, n);
-                if (c != 0) { b = c; bottomRow = r; break; }
-            }
-        }
-        bmp.recycle();
-        if (a == 0 || b == 0) return null;
-        // The sampled rows sit at these heights of the tile; extend the line through them to its edges. A row
-        // taken further in sits on artwork-side plate, so its slope is less certain: cap how far it reaches.
-        float margin = (1f - ICON_SHARE) / 2f;
-        float yA = margin + ICON_SHARE * topRow / n, yB = margin + ICON_SHARE * bottomRow / n;
-        float t0 = -yA / (yB - yA), t1 = (1f - yA) / (yB - yA);
-        if (topRow != 7 || bottomRow != n - 8) {
-            t0 = Math.max(-0.35f, t0);
-            t1 = Math.min(1.35f, t1);
-        }
-        return new int[]{mix(a, b, t0), mix(a, b, t1)};
-    }
-
-    /** {@link #plateColor(int[])} of row y, between the same insets as the row's distance from the edge. */
-    private static int plateColor(Bitmap bmp, int y, int n) {
-        int inset = Math.min(y, n - 1 - y);
-        int[] row = new int[n - 2 * inset];
-        bmp.getPixels(row, 0, row.length, inset, y, row.length, 1);
-        return plateColor(row);
-    }
-
-    /** The colour most of a row shares, ignoring artwork that crosses it; 0 if the row is not mostly plate. */
-    private static int plateColor(int[] row) {
-        int[] r = new int[row.length], g = new int[row.length], b = new int[row.length];
-        int opaque = 0;
-        for (int p : row) {
-            if (Color.alpha(p) < 240) continue;
-            r[opaque] = Color.red(p);
-            g[opaque] = Color.green(p);
-            b[opaque] = Color.blue(p);
-            opaque++;
-        }
-        if (opaque < row.length * 0.9f) return 0;
-        int mr = median(r, opaque), mg = median(g, opaque), mb = median(b, opaque);
-        long sr = 0, sg = 0, sb = 0;
-        int close = 0;
-        for (int i = 0; i < opaque; i++) {
-            if (Math.abs(r[i] - mr) + Math.abs(g[i] - mg) + Math.abs(b[i] - mb) >= 48) continue;
-            sr += r[i];
-            sg += g[i];
-            sb += b[i];
-            close++;
-        }
-        if (close < row.length * 0.7f) return 0;
-        return Color.rgb((int) (sr / close), (int) (sg / close), (int) (sb / close));
-    }
-
-    private static int median(int[] values, int count) {
-        int[] sorted = Arrays.copyOf(values, count);
-        Arrays.sort(sorted);
-        return sorted[count / 2];
-    }
-
-    /** a + (b - a) * t per channel, clamped; t outside 0..1 extrapolates. */
-    private static int mix(int a, int b, float t) {
-        return Color.rgb(clamp(Color.red(a) + (Color.red(b) - Color.red(a)) * t),
-                clamp(Color.green(a) + (Color.green(b) - Color.green(a)) * t),
-                clamp(Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t));
-    }
-
-    private static int clamp(float v) {
-        return Math.max(0, Math.min(255, Math.round(v)));
-    }
-
-    private static int vividColor(Drawable live) {
-        if (live == null) return 0xFF444444;
-        // Draw a private copy: changing the bounds of the drawable an ImageView shows would blank the tile.
-        Drawable d = live.getConstantState() != null ? live.getConstantState().newDrawable().mutate() : live;
-        Rect saved = new Rect(d.getBounds());
-        int n = 12;
-        Bitmap bmp = Bitmap.createBitmap(n, n, Bitmap.Config.ARGB_8888);
-        Canvas c = new Canvas(bmp);
-        d.setBounds(0, 0, n, n);
-        d.draw(c);
-        d.setBounds(saved);
-        int[] px = new int[n * n];
-        bmp.getPixels(px, 0, n, 0, 0, n, n);
-        bmp.recycle();
-        float[] hsv = new float[3];
-        int best = 0xFF444444;
-        float bestScore = -1f;
-        long r = 0, g = 0, b = 0;
-        for (int p : px) {
-            int pr = (p >> 16) & 0xFF, pg = (p >> 8) & 0xFF, pb = p & 0xFF;
-            r += pr;
-            g += pg;
-            b += pb;
-            int max = Math.max(pr, Math.max(pg, pb));
-            int min = Math.min(pr, Math.min(pg, pb));
-            float sat = max == 0 ? 0f : (max - min) / (float) max;
-            float val = max / 255f;
-            float score = sat * Math.min(1f, val * 1.4f);   // saturated and not too dark
-            if (score > bestScore) {
-                bestScore = score;
-                best = p;
-            }
-        }
-        if (bestScore < 0.25f) {   // nearly monochrome banner (e.g. white): use its average, lifted
-            int avg = Color.rgb((int) (r / (n * n)), (int) (g / (n * n)), (int) (b / (n * n)));
-            Color.colorToHSV(avg, hsv);
-            hsv[2] = Math.max(hsv[2], 0.55f);
-            return Color.HSVToColor(hsv);
-        }
-        Color.colorToHSV(best, hsv);
-        hsv[1] = Math.min(1f, hsv[1] * 1.1f);
-        hsv[2] = Math.max(0.5f, hsv[2]);
-        return Color.HSVToColor(hsv);
     }
 
     /** Corner radius for a tile of this width: 16dp at the design width, proportionally less when smaller. */
@@ -921,15 +635,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final TextView name;
         final boolean animations;
         final boolean advancedEffects;
-        final boolean reducedMotion;
         /** Alpha of the name while the tile is not focused (always_show_names). */
         final float restNameAlpha;
-        final boolean overshoot;
-        /** A dock tile: it grows in place without advanced_effects' lift, which reads as off-centre in the band (#2135). */
+        /** A dock tile: it grows in place without advanced_effects' lift, which reads as off-centre in the band. */
         boolean inDock;
 
-        Holder(View v, TileListener listener, boolean animations, boolean advancedEffects,
-               boolean reducedMotion, float restNameAlpha, boolean overshoot) {
+        Holder(View v, TileListener listener, boolean animations, boolean advancedEffects, float restNameAlpha) {
             super(v);
             card = v.findViewById(R.id.card);
             cardBackground = card.getBackground();
@@ -939,9 +650,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             name = v.findViewById(R.id.name);
             this.animations = animations;
             this.advancedEffects = advancedEffects;
-            this.reducedMotion = reducedMotion;
             this.restNameAlpha = restNameAlpha;
-            this.overshoot = overshoot;
 
             final float density = v.getResources().getDisplayMetrics().density;
             card.setOutlineProvider(new ViewOutlineProvider() {
@@ -976,27 +685,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     banner.setScaleY(1f);
                     name.setAlpha(focused ? 1f : restNameAlpha);
                     name.setTranslationY(0f);
-                } else if (reducedMotion) {
-                    // A short zoom with no hardware layer: building a layer for so short an animation costs more
-                    // frames than it saves. The name just appears instead of fading.
-                    view.animate().scaleX(s).scaleY(s)
-                            .translationY(focused && advancedEffects && !inDock ? -4f * density : 0f)
-                            .translationZ(focused && advancedEffects ? 8f * density : 0f)
-                            .setDuration(focused ? Motion.REDUCED_MS : 60)
-                            .setInterpolator(new DecelerateInterpolator())
-                            .start();
-                    name.setAlpha(focused ? 1f : restNameAlpha);
-                    // Same place as the full motion's slide ends: the layout's -6dp is only its starting point, and
-                    // left there the name overlaps the zoomed tile.
-                    // Only on focus: snapping it back to -6dp while it fades out would jump it up over the tile.
-                    if (focused) name.setTranslationY(density * 4f);
                 } else {
                     view.animate().scaleX(s).scaleY(s)
                             .translationY(focused && advancedEffects && !inDock ? -4f * density : 0f)
                             .translationZ(focused && advancedEffects ? 8f * density : 0f)
                             .setDuration(advancedEffects ? (focused ? 220 : 170) : (focused ? 260 : 180))
-                            .setInterpolator(focused && !overshoot ? new DecelerateInterpolator(1.5f)
-                                    : new OvershootInterpolator(focused ? (advancedEffects ? 0.7f : 1.6f) : 0f))
+                            .setInterpolator(focused ? new DecelerateInterpolator(1.5f) : new OvershootInterpolator(0f))
                             .withLayer().start();
                     if (advancedEffects) {
                         banner.animate().scaleX(focused ? 1.035f : 1f).scaleY(focused ? 1.035f : 1f)

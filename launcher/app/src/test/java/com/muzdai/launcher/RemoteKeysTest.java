@@ -27,33 +27,6 @@ public class RemoteKeysTest {
         return RemoteKeys.parseHoldAppKeys(Arrays.asList(entries), RemoteKeysTest::keyCode);
     }
 
-    @Test public void inFrontMatchesTheTargetsPackageOnly() {
-        assertTrue(RemoteKeys.inFront("com.vt.tv.tvcenter", "com.vt.tv.tvcenter"));
-        assertTrue(RemoteKeys.inFront("io.github.maxhayim.brightness/.QuickActivity", "io.github.maxhayim.brightness"));
-        assertFalse(RemoteKeys.inFront("com.vt.tv.tvcenter", "com.muzdai.launcher"));
-        assertFalse(RemoteKeys.inFront("com.vt.tv.tvcenter", ""));
-        assertFalse(RemoteKeys.inFront(null, "com.vt.tv.tvcenter"));
-        assertFalse(RemoteKeys.inFront("input:com.vt.source.external/.HdmiInputService/HW2", "com.vt.source.external"));
-    }
-
-    @Test public void frontEntriesAreReadApartFromTheRest() {
-        List<String> entries = Arrays.asList("172:com.vt.tv.tvcenter", "front:172:guide:com.vt.tv.tvcenter",
-                "front:scan:490:com.wbd.hbomax", "hold:172:a.b");
-        assertEquals("com.vt.tv.tvcenter", RemoteKeys.parseAppKeys(entries, RemoteKeysTest::keyCode).get(172));
-        Map<Integer, String> front = RemoteKeys.parseFrontAppKeys(entries, RemoteKeysTest::keyCode);
-        assertEquals(1, front.size());
-        assertEquals("guide:com.vt.tv.tvcenter", front.get(172));
-        assertEquals("com.wbd.hbomax", RemoteKeys.parseFrontAppScancodes(entries).get(490));
-        assertTrue(RemoteKeys.parseAppScancodes(entries).isEmpty());
-    }
-
-    @Test public void guideTargetNamesItsPackage() {
-        assertEquals("com.vt.tv.tvcenter", RemoteKeys.guidePackage("guide:com.vt.tv.tvcenter"));
-        assertNull(RemoteKeys.guidePackage("guide:"));
-        assertNull(RemoteKeys.guidePackage("com.vt.tv.tvcenter"));
-        assertNull(RemoteKeys.guidePackage(null));
-    }
-
     @Test public void keyNamesWorkLikeNumbers() {
         Map<Integer, String> keys = parse("KEYCODE_BUTTON_3:com.google.android.youtube.tv", "KEYCODE_NOT_A_KEY:a.b");
         assertEquals(1, keys.size());
@@ -307,18 +280,5 @@ public class RemoteKeysTest {
         remote.up("1:190:0", 1100, 1000, "tap", "hold");
         remote.up("1:191:0", 1700, 1000, "tap", "hold");
         assertEquals(Arrays.asList("tap", "hold"), remote.opened);
-    }
-
-    @Test public void menuReleasedTakesXiaomisInjectedShortPress() {
-        // ACTION_DOWN 0, ACTION_UP 1; FLAG_CANCELED 0x20, FLAG_CANCELED_LONG_PRESS 0x100, FLAG_FROM_SYSTEM 0x8.
-        assertTrue(RemoteKeys.menuReleased(1, 0));
-        assertTrue(RemoteKeys.menuReleased(1, 0x8));
-        assertTrue(RemoteKeys.menuReleased(1, RemoteKeys.XIAOMI_SHORT_MENU_FLAGS));
-        assertFalse(RemoteKeys.menuReleased(0, 0));
-        assertFalse(RemoteKeys.menuReleased(0, RemoteKeys.XIAOMI_SHORT_MENU_FLAGS));
-        // A cancelled press elsewhere, long press or not, still opens nothing.
-        assertFalse(RemoteKeys.menuReleased(1, 0x20));
-        assertFalse(RemoteKeys.menuReleased(1, 0x20 | 0x100 | 0x8));
-        assertFalse(RemoteKeys.menuReleased(1, RemoteKeys.XIAOMI_SHORT_MENU_FLAGS & ~0x4000));
     }
 }

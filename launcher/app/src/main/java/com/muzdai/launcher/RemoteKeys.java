@@ -25,13 +25,13 @@ import java.util.function.ToIntFunction;
 import java.util.regex.Pattern;
 
 /**
- * Remote buttons that only the stock launcher answered, for InputKeyService and HomeKeyService: app_keys
+ * Remote buttons that only the stock launcher answered, for InputKeyService and Home: app_keys
  * (config.xml) maps a keycode to the app it opens, as "190:com.google.android.youtube.tv" or
  * "KEYCODE_BUTTON_3:com.google.android.youtube.tv", or a scancode as "scan:490:com.wbd.hbomax". A "hold:"
  * prefix makes an entry the long-press action instead: "hold:KEYCODE_BUTTON_8:org.xbmc.kodi" opens Kodi when
  * that button is held for HOLD_MS, while the unprefixed entry still opens on a tap; "hold:scan:490:..." does
- * the same for a scancode. One set of maps for both services; Android hands a key to every service that filters,
- * so both may call handle() for one event, and it answers each press once.
+ * the same for a scancode. Home handles the vendor keys that never reach the service (see MainActivity), so the
+ * two may call handle() for one event, and it answers each press once.
  * A target of "input:<input id>" switches to that TV input (an HDMI port) instead of opening an app, a target
  * of "inputs" opens the input switcher, for a remote whose source button sends a key Android does not map,
  * one of the action words (back, home, recents, mute, sleep, screensaver, settings, wifi, library) does that action, and
@@ -100,19 +100,6 @@ final class RemoteKeys {
         return parseAppKeys(prefixed(entries, "hold:"), names);
     }
 
-    /** keycode -> target from the "front:" entries, used while the button's own app is already in front. */
-    static Map<Integer, String> parseFrontAppKeys(Iterable<String> entries) {
-        return parseFrontAppKeys(entries, KeyEvent::keyCodeFromString);
-    }
-
-    static Map<Integer, String> parseFrontAppKeys(Iterable<String> entries, ToIntFunction<String> names) {
-        return parseAppKeys(prefixed(entries, "front:"), names);
-    }
-
-    static Map<Integer, String> parseFrontAppScancodes(Iterable<String> entries) {
-        return parseAppScancodes(prefixed(entries, "front:"));
-    }
-
     /**
      * Applies the key_filter choice (config.xml): when false the service drops
      * FLAG_REQUEST_FILTER_KEY_EVENTS at runtime, so it stays enabled for nothing but stops filtering.
@@ -153,7 +140,7 @@ final class RemoteKeys {
         return parseAppScancodes(prefixed(entries, "hold:"));
     }
 
-    /** The entries with this prefix ("hold:", "front:"), the prefix removed, so the normal parsers can read them. */
+    /** The entries with this prefix ("hold:"), the prefix removed, so the normal parsers can read them. */
     private static Iterable<String> prefixed(Iterable<String> entries, String prefix) {
         List<String> found = new ArrayList<>();
         for (String entry : entries) {
@@ -162,23 +149,6 @@ final class RemoteKeys {
             if (text.startsWith(prefix)) found.add(text.substring(prefix.length()).trim());
         }
         return found;
-    }
-
-    /** The package of a "guide:<package>" target, or null for any other target. */
-    static String guidePackage(String target) {
-        if (target == null || !target.startsWith("guide:")) return null;
-        String pkg = target.substring(6).trim();
-        return pkg.isEmpty() ? null : pkg;
-    }
-
-    /**
-     * True when a tap's target is the app already in front ("package" or "package/.Activity"), so its "front:"
-     * entry applies instead. Inputs and action words never match.
-     */
-    static boolean inFront(String target, String front) {
-        if (target == null || front == null || front.isEmpty()) return false;
-        int slash = target.indexOf('/');
-        return (slash < 0 ? target : target.substring(0, slash)).equals(front);
     }
 
     /** Created on first use: building a Handler while the class loads breaks the JVM tests. */
@@ -297,21 +267,6 @@ final class RemoteKeys {
         }
     }
 
-    /**
-     * The flags on the KEYCODE_MENU pair that Xiaomi's China firmware (MiTV-MFTR0, Android 11) injects for a short
-     * press of the remote's Menu key, after keeping the real press for itself (#1637). They include FLAG_CANCELED,
-     * so the pair reads as a cancelled press, and the undocumented 0x1000, 0x2000 and 0x4000, which no real
-     * cancelled press carries.
-     */
-    static final int XIAOMI_SHORT_MENU_FLAGS = 0x7531;
-
-    /** True for the UP that ends a Menu press: not cancelled, or cancelled only as Xiaomi's injected short press is. */
-    static boolean menuReleased(int action, int flags) {
-        if (action != KeyEvent.ACTION_UP) return false;
-        return (flags & KeyEvent.FLAG_CANCELED) == 0
-                || (flags & XIAOMI_SHORT_MENU_FLAGS) == XIAOMI_SHORT_MENU_FLAGS;
-    }
-
     /** The app a mapped key opens: its hold entry after HOLD_MS, otherwise its normal one. */
     static String target(String app, String holdApp, long heldMs) {
         return heldMs >= HOLD_MS && holdApp != null ? holdApp : app;
@@ -368,12 +323,9 @@ final class RemoteKeys {
                         AudioManager.ADJUST_TOGGLE_MUTE, AudioManager.FLAG_SHOW_UI);
                 break;
             case "screensaver":
-                // The screensaver chosen in the TV's settings, through the system's "start now" shortcut; the
-                // launcher's own clock where the firmware has no such shortcut.
-                Intent dream = new Intent(Intent.ACTION_MAIN)
-                        .setClassName("com.android.systemui", "com.android.systemui.Somnambulator");
-                if (ctx.getPackageManager().resolveActivity(dream, 0) == null) dream = new Intent(ctx, ClockActivity.class);
-                start(ctx, dream);
+                // The screensaver chosen in the TV's settings, through the system's "start now" shortcut.
+                start(ctx, new Intent(Intent.ACTION_MAIN)
+                        .setClassName("com.android.systemui", "com.android.systemui.Somnambulator"));
                 break;
             case "settings":
                 start(ctx, SystemSettings.intent(ctx, Settings.ACTION_SETTINGS));
@@ -432,14 +384,6 @@ final class RemoteKeys {
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } catch (ActivityNotFoundException ignored) {
             }
-            return;
-        }
-        String guide = guidePackage(pkg);
-        if (guide != null) {
-            // The program guide, asked for the way Android TV's Live TV apps take it: the programs directory.
-            start(ctx, new Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(TvContract.Programs.CONTENT_URI, "vnd.android.cursor.dir/program")
-                    .setPackage(guide));
             return;
         }
         String inputId = inputId(pkg);

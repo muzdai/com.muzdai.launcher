@@ -10,7 +10,7 @@ import java.util.Locale;
 import java.util.Random;
 
 final class WallpaperRotation {
-    /** Playback orders persisted in config.json (wallpaper_order). */
+    /** Playback orders (fork_defaults.xml, fork_wallpaper_order). */
     static final String ORDER_SEQUENTIAL = "sequential";
     static final String ORDER_SHUFFLE = "shuffle";
 
