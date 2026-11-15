@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s_title">Настройки</string>
+    <string name="s_group_home">Главный экран</string>
+    <string name="s_group_system">Система</string>
+    <string name="s_home">Главный экран</string>
+    <string name="s_home_summary">Приложения в ряду, док, часы</string>
+    <string name="s_wallpapers">Обои</string>
+    <string name="s_info">Информация</string>
+    <string name="s_info_summary">Погода, курсы валют, новости</string>
+    <string name="s_keys_summary">Что открывают кнопки приложений</string>
+    <string name="s_motion">Анимация</string>
+    <string name="s_motion_summary">Движение и эффекты</string>
+    <string name="s_animations">Анимация</string>
+    <string name="s_animations_desc">Плавное движение при переходах между плитками и меню.</string>
+    <string name="s_clock_format">Формат часов</string>
+    <string name="s_columns_desc">Сколько приложений помещается в ряд дока.</string>
+    <string name="s_dock_desc">Насколько обои просвечивают сквозь док.</string>
+    <string name="s_slider_hint">Меняйте кнопками ◀ ▶ на пульте.</string>
+    <string name="s_tv_settings_summary">Изображение, звук, сеть, приложения</string>
+    <string name="s_reset">Сбросить настройки лаунчера</string>
+    <string name="s_reset_summary">Вернуть значения по умолчанию</string>
+    <string name="s_reset_desc">Приложения в ряду, док, часы, обои, анимация и приложение при запуске вернутся к значениям по умолчанию. Погода, новости и кнопки пульта сохранятся.</string>
+    <string name="s_reset_confirm">Сбросить</string>
+    <string name="s_reset_done">Настройки лаунчера сброшены</string>
+    <string name="s_about">О лаунчере</string>
+    <string name="s_version">Версия</string>
+    <string name="s_package">Пакет</string>
+    <string name="s_system_app">Системное приложение</string>
+    <string name="s_yes">Да</string>
+    <string name="s_no">Нет</string>
+    <string name="s_weather">Погода</string>
+    <string name="s_show_weather">Показывать погоду</string>
+    <string name="s_city">Город</string>
+    <string name="s_city_none">Не выбран</string>
+    <string name="s_rates">Курсы валют</string>
+    <string name="s_show_rates">Курс валюты</string>
+    <string name="s_news">Новости</string>
+    <string name="s_show_news">Показывать ленту новостей</string>
+    <string name="s_sources">Источники</string>
+    <string name="s_currencies">Валюты</string>
+    <string name="s_currencies_limit">Не более %1$d валют</string>
+    <string-array name="s_currency_names">
+        <item>Доллар США</item><item>Евро</item><item>Фунт стерлингов</item><item>Турецкая лира</item>
+        <item>Украинская гривна</item><item>Армянский драм</item><item>Азербайджанский манат</item>
+    </string-array>
+</resources>

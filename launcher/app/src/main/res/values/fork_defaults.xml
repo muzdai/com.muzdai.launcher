@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- vPro TV Launcher: built-in defaults of the launcher's own keys. Launcher settings store the owner's choices on top. -->
+<resources>
+    <bool name="fork_home_dock_only">true</bool>
+    <bool name="fork_library_button_left">true</bool>
+    <integer name="fork_menu_opacity">70</integer>
+    <bool name="fork_tile_menu_close">true</bool>
+    <bool name="fork_show_weather">true</bool>
+    <bool name="fork_show_nbg_rates">true</bool>
+    <bool name="fork_show_news">true</bool>
+    <!-- The dock band's opacity (stock: 100). -->
+    <integer name="fork_dock_opacity">40</integer>
+    <!-- Background behind everything, #RRGGBB. -->
+    <string name="fork_background_color" translatable="false">#05070C</string>
+    <!-- Wallpapers: pictures in Android/data/<package>/files/wallpapers, a new one every N minutes (0: no rotation). -->
+    <bool name="fork_wallpaper">true</bool>
+    <integer name="fork_wallpaper_rotation_minutes">5</integer>
+    <string name="fork_wallpaper_order" translatable="false">shuffle</string>
+    <integer name="fork_wallpaper_dim">0</integer>
+    <!-- Wallpaper groups offered in Launcher settings, "id:Label"; a group's pictures are named "<id>-...". -->
+    <string-array name="fork_wallpaper_groups" translatable="false">
+        <item>nature:Природа</item>
+        <item>space:Космос</item>
+        <item>city:Города</item>
+        <item>cinema:Кинематограф</item>
+        <item>games:Игры</item>
+    </string-array>
+</resources>

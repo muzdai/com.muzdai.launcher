@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Privileged permissions of com.muzdai.launcher in /system/priv-app. With ro.control_privapp_permissions=enforce
+     every privileged permission the APK requests must be listed here, or the TV will not boot. -->
+<permissions>
+    <privapp-permissions package="com.muzdai.launcher">
+        <permission name="android.permission.DELETE_PACKAGES" />
+        <permission name="android.permission.WRITE_SECURE_SETTINGS" />
+    </privapp-permissions>
+</permissions>
