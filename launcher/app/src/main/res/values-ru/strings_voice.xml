@@ -2,9 +2,7 @@
 <resources>
     <string name="voice_search">Голосовой поиск</string>
     <string name="voice_hint_type">Скажите или введите, что найти</string>
-    <string name="voice_starting">Включаю микрофон…</string>
     <string name="voice_listening">Говорите…</string>
-    <string name="voice_recognizing">Распознаю…</string>
     <string name="voice_choose">Выберите, где искать</string>
     <string name="voice_err_nomatch">Не расслышал, попробуйте ещё раз</string>
     <string name="voice_err_permission">Нет доступа к микрофону</string>

@@ -565,10 +565,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         btnVoice = findViewById(R.id.btnVoice);
         btnVoice.setOnClickListener(v -> openVoiceSearch());
-        // Right of the App library button ("All apps"), wherever library_button_left put that.
+        // Left of the App library button ("All apps"), wherever library_button_left put that.
         ViewGroup topBar = (ViewGroup) btnVoice.getParent();
         topBar.removeView(btnVoice);
-        topBar.addView(btnVoice, topBar.indexOfChild(btnLibraryTop) + 1);
+        topBar.addView(btnVoice, topBar.indexOfChild(btnLibraryTop));
         addTopBarApps(cfg.topBarApps, cfg.launchActions);
         iconOnlyButtons = cfg.iconOnlyButtons;
         wifiIconOnly = iconOnlyButtons && cfg.wifiLabelWidth <= 0;
@@ -602,10 +602,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 return true;
             }
             int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : firstTopButton().getId();
-            // vPro, library_button_left: the library button is the left end now, so Left from
-            // Inputs must reach it instead of being swallowed as the end of the bar.
+            // vPro, library_button_left: the voice button, left of the library button, is the left end now, so Left
+            // from Inputs must reach them instead of being swallowed as the end of the bar.
             if (fork != null && fork.libraryButtonLeft && btnLibraryTop.getVisibility() == View.VISIBLE) {
-                firstButton = R.id.btnLibraryTop;
+                firstButton = R.id.btnVoice;
             }
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == firstButton;
             return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == R.id.btnSettings;
@@ -949,6 +949,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         cancelHoldOk();
         cancelHoldRight();
         endReorder();   // Home or another app while reordering keeps the order so far
+        if (voice != null) voice.cancel();
         wallpaperPlayer.stop();
         hero.animate().cancel();
         handler.removeCallbacks(minuteTick);
@@ -1010,6 +1011,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         cancelHoldOk();
         cancelHoldRight();
         unregisterReceiver(packageReceiver);
+        if (voice != null) voice.destroy();
         if (openOnStartOnWake) unregisterReceiver(wakeReceiver);
         wallpaperPlayer.close();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
@@ -2578,14 +2580,52 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         holdRightArmed = false;
     }
 
+    /** Listens in place: a beep and the voice button lit red, no window; again while listening stops. */
     private void openVoiceSearch() {
         cancelHoldRight();
         if (openPopup != null) openPopup.dismiss();
-        try {
-            startActivity(new Intent(this, VoiceSearchActivity.class));
-        } catch (ActivityNotFoundException ignored) {
+        if (voice == null) voice = new VoiceInput(this, voiceCallback);
+        if (voice.listening()) {
+            voice.cancel();
+            return;
         }
+        if (!VoiceInput.permitted(this)) {
+            // The panel asks for the microphone and listens itself.
+            open(new Intent(this, VoiceSearchActivity.class));
+            return;
+        }
+        if (!voice.start()) Toast.makeText(this, R.string.voice_no_recognizer, Toast.LENGTH_SHORT).show();
     }
+
+    private VoiceInput voice;
+    private final VoiceInput.Callback voiceCallback = new VoiceInput.Callback() {
+        @Override public void onListening(boolean on) {
+            btnVoice.setActivated(on);
+            if (!on) {
+                btnVoice.setScaleX(1f);
+                btnVoice.setScaleY(1f);
+            }
+        }
+        @Override public void onLevel(float level) {
+            btnVoice.setScaleX(1f + level / 30f);
+            btnVoice.setScaleY(1f + level / 30f);
+        }
+        @Override public void onResult(String text) {
+            if (isFinishing() || isDestroyed()) return;
+            VoiceActions.Plan p = new VoiceActions(MainActivity.this).plan(text);
+            if (p.kind == VoiceActions.Plan.Kind.START) {
+                Toast.makeText(MainActivity.this, "«" + text + "»", Toast.LENGTH_SHORT).show();
+                open(p.intent);
+            } else {
+                // A choice to make: where to search, or an app that is not installed.
+                open(new Intent(MainActivity.this, VoiceSearchActivity.class)
+                        .putExtra(VoiceSearchActivity.EXTRA_QUERY, text));
+            }
+        }
+        @Override public void onError(int messageRes, int code) {
+            Toast.makeText(MainActivity.this, getString(messageRes, code), Toast.LENGTH_SHORT).show();
+        }
+    };
 
     private void cancelHoldOk() {
         handler.removeCallbacks(holdOkTimer);

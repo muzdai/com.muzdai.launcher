@@ -3,9 +3,7 @@
 <resources>
     <string name="voice_search">Voice search</string>
     <string name="voice_hint_type">Say or type what to find</string>
-    <string name="voice_starting">Turning the microphone on…</string>
     <string name="voice_listening">Listening…</string>
-    <string name="voice_recognizing">Recognizing…</string>
     <string name="voice_choose">Choose where to look</string>
     <string name="voice_err_nomatch">Didn\'t catch that, try again</string>
     <string name="voice_err_permission">No access to the microphone</string>
