@@ -61,7 +61,7 @@ final class InfoWidgets {
     private static final String KEY_NEWS = "news_titles";
     private static final String KEY_NEWS_AT = "news_at";
     private static final long NEWS_MAX_AGE_MS = 30L * 60 * 1000;
-    /** Google News sections, Russian edition (top stories ranked by Google across many outlets); "TOP" is the front page. */
+    /** Google News sections, Ukrainian edition in Russian (top stories ranked by Google); "TOP" is the front page. */
     static final String[] NEWS_TOPICS = {"WORLD", "TOP", "GEORGIA", "BUSINESS", "TECHNOLOGY", "SCIENCE", "SPORTS",
             "ENTERTAINMENT", "HEALTH"};
     static final String KEY_NEWS_TOPIC = "news_topic";
@@ -74,7 +74,9 @@ final class InfoWidgets {
     }
 
     private static String newsUrl(String topic) {
-        String edition = "hl=ru&gl=RU&ceid=RU:ru";
+        // The Ukrainian edition in Russian: Ukrainian, European and exiled outlets, where the Russian (and, as
+        // tested, the Georgian and US) Russian-language editions are made of Russian outlets. NewsFilter does the rest.
+        String edition = "hl=ru&gl=UA&ceid=UA:ru";
         // Google News has no Georgia section in the Russian edition: a search for "Грузия" over the last day.
         if ("GEORGIA".equals(topic)) return "https://news.google.com/rss/search?q=%D0%93%D1%80%D1%83%D0%B7%D0%B8%D1%8F+when:1d&" + edition;
         return "TOP".equals(topic) ? "https://news.google.com/rss?" + edition
@@ -309,7 +311,10 @@ final class InfoWidgets {
         }
     }
 
-    /** The first 10 items' titles of the feed, one per line; Google appends " - Outlet", shown as " · Outlet". */
+    /**
+     * The first 10 items' titles of the feed, one per line, leaving out Russian and pro-Russian outlets (NewsFilter, by
+     * the item's {@code <source url>}); Google appends " - Outlet", shown as " · Outlet".
+     */
     private static boolean fetchNews(Context ctx) {
         try {
             org.xmlpull.v1.XmlPullParser x = android.util.Xml.newPullParser();
@@ -318,17 +323,26 @@ final class InfoWidgets {
             StringBuilder out = new StringBuilder();
             int n = 0;
             boolean inItem = false;
+            String title = null;
+            boolean blocked = false;
             for (int e = x.getEventType(); e != org.xmlpull.v1.XmlPullParser.END_DOCUMENT && n < 10; e = x.next()) {
-                if (e == org.xmlpull.v1.XmlPullParser.START_TAG && "item".equals(x.getName())) inItem = true;
-                else if (e == org.xmlpull.v1.XmlPullParser.END_TAG && "item".equals(x.getName())) inItem = false;
-                else if (inItem && e == org.xmlpull.v1.XmlPullParser.START_TAG && "title".equals(x.getName())) {
+                if (e == org.xmlpull.v1.XmlPullParser.START_TAG && "item".equals(x.getName())) {
+                    inItem = true;
+                    title = null;
+                    blocked = false;
+                } else if (e == org.xmlpull.v1.XmlPullParser.END_TAG && "item".equals(x.getName())) {
+                    inItem = false;
+                    if (title == null || title.isEmpty() || blocked) continue;
+                    if (out.length() > 0) out.append('\n');
+                    out.append(title);
+                    n++;
+                } else if (inItem && e == org.xmlpull.v1.XmlPullParser.START_TAG && "title".equals(x.getName())) {
                     String t = x.nextText().replace('\n', ' ').trim();
                     int dash = t.lastIndexOf(" - ");
                     if (dash > 0) t = t.substring(0, dash) + "  \u00B7  " + t.substring(dash + 3);
-                    if (t.isEmpty()) continue;
-                    if (out.length() > 0) out.append('\n');
-                    out.append(t);
-                    n++;
+                    title = t;
+                } else if (inItem && e == org.xmlpull.v1.XmlPullParser.START_TAG && "source".equals(x.getName())) {
+                    blocked = NewsFilter.blocked(x.getAttributeValue(null, "url"));
                 }
             }
             if (n == 0) return false;
