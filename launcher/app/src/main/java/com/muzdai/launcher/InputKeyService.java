@@ -232,7 +232,7 @@ public class InputKeyService extends AccessibilityService {
                                 if (tab != null && click(tab)) next(RELEASES);
                                 break;
                             }
-                            AccessibilityNodeInfo hit = firstLabelled(root, TRACK);
+                            AccessibilityNodeInfo hit = bestTrack(root, query);
                             if (hit != null && click(hit)) next(FULL_SCREEN);
                             break;
                         }
@@ -287,15 +287,44 @@ public class InputKeyService extends AccessibilityService {
 
     private static final String[] TRACK = {"track •", "трек •"}, ALBUM = {"album •", "альбом •"};
 
-    /** The first search result labelled as a track (or album), in screen order. */
-    private static AccessibilityNodeInfo firstLabelled(AccessibilityNodeInfo node, String[] kind) {
-        if (node == null) return null;
-        if (isLabel(node.getText(), kind)) return node;
-        for (int i = 0; i < node.getChildCount(); i++) {
-            AccessibilityNodeInfo hit = firstLabelled(node.getChild(i), kind);
-            if (hit != null) return hit;
+    /**
+     * The track result whose title is in the query, the longest such title when several are ("Wish You Were Here"
+     * over a track of the album of that name); the first track when none is. The title is the text next to the
+     * card's "Track • Artist • Album" label.
+     */
+    private static AccessibilityNodeInfo bestTrack(AccessibilityNodeInfo root, String query) {
+        List<AccessibilityNodeInfo> labels = new ArrayList<>();
+        collectLabelled(root, TRACK, labels);
+        AccessibilityNodeInfo best = null;
+        int bestLength = -1;
+        for (AccessibilityNodeInfo label : labels) {
+            String title = siblingTitle(label);
+            if (title != null && titleInQuery(title, query) && title.length() > bestLength) {
+                best = label;
+                bestLength = title.length();
+            }
+        }
+        return best != null ? best : labels.isEmpty() ? null : labels.get(0);
+    }
+
+    /** The text beside a result's label in the same card: its title. */
+    private static String siblingTitle(AccessibilityNodeInfo label) {
+        AccessibilityNodeInfo parent = label.getParent();
+        if (parent == null) return null;
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            AccessibilityNodeInfo c = parent.getChild(i);
+            if (c != null && c.getText() != null && c.getText().length() > 0 && !isLabel(c.getText(), TRACK)
+                    && !isLabel(c.getText(), ALBUM)) {
+                return c.getText().toString();
+            }
         }
         return null;
+    }
+
+    private static void collectLabelled(AccessibilityNodeInfo node, String[] kind, List<AccessibilityNodeInfo> out) {
+        if (node == null) return;
+        if (isLabel(node.getText(), kind)) out.add(node);
+        for (int i = 0; i < node.getChildCount(); i++) collectLabelled(node.getChild(i), kind, out);
     }
 
     /**
