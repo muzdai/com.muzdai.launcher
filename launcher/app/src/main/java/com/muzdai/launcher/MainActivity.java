@@ -663,6 +663,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (tim != null) tim.registerCallback(inputCallback, handler);
         if (cm != null) cm.registerDefaultNetworkCallback(networkCallback);
         // Not after recreate(): the launch intent survives it and would open the settings again.
+        if (getIntent() != null && getIntent().getBooleanExtra(EXTRA_LISTEN, false)) {
+            setIntent(new Intent(Intent.ACTION_MAIN));
+            listenOnResume = true;
+        }
         if (savedInstanceState == null && !openLauncherSettingsIfAsked(getIntent()) && !openLibraryIfAsked(getIntent())) {
             openInputsIfAsked(getIntent());
         }
@@ -736,6 +740,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (openLauncherSettingsIfAsked(intent)) return;
         if (openLibraryIfAsked(intent)) return;
         if (openInputsIfAsked(intent)) return;
+        if (intent != null && intent.getBooleanExtra(EXTRA_LISTEN, false)) {
+            setIntent(new Intent(Intent.ACTION_MAIN));
+            listenOnResume = true;   // keep the tile focus as it was: only the voice button lights up
+            return;
+        }
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
         grid.scrollToPosition(0);
         lastFocused = 0;
@@ -774,6 +783,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             root.post(infoTick);
         }
         if (miniPlayer != null) miniPlayer.start();
+        if (listenOnResume && root != null) {
+            listenOnResume = false;
+            // After the window has focus: the recognizer and the beep need Home really in front.
+            root.postDelayed(() -> {
+                if (resumed && !isFinishing()) openVoiceSearch();
+            }, 300);
+        }
         // Something changed in Launcher settings: rebuild with it, however the settings were left. Only Back
         // delivered their RESULT_OK; Home (the remote's button) clears them off this task and the result comes
         // back cancelled, so a new wallpaper or layout waited for the next process start.
@@ -2558,17 +2574,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Home while it is in front, for the TCL Channel key in InputKeyService; null otherwise. Main thread only. */
     private static MainActivity inFront;
 
-    /** TCL Channel (InputKeyService): Home in front listens in place; elsewhere the voice panel opens and listens. */
+    /** Home brought to the front by TCL Channel from another app, to listen there. */
+    static final String EXTRA_LISTEN = "com.muzdai.launcher.LISTEN";
+
+    /**
+     * TCL Channel (InputKeyService): Home in front listens in place. From another app Home comes to the front and
+     * listens the same way, a beep and the lit voice button, no window.
+     */
     static void voiceKey(android.content.Context ctx) {
         if (inFront != null && !inFront.isFinishing()) {
             inFront.openVoiceSearch();
             return;
         }
         try {
-            ctx.startActivity(new Intent(ctx, VoiceSearchActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            ctx.startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                    .setClass(ctx, MainActivity.class).putExtra(EXTRA_LISTEN, true)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED));
         } catch (ActivityNotFoundException ignored) {
         }
     }
+
+    /** Set by an EXTRA_LISTEN start; onResume listens once Home is on screen. */
+    private boolean listenOnResume;
 
     /** Listens in place: a beep and the voice button lit red, no window; again while listening stops. */
     private void openVoiceSearch() {

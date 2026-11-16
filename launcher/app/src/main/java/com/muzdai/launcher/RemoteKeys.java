@@ -44,7 +44,7 @@ final class RemoteKeys {
 
     /** The app_keys target that opens the input switcher, as "scan:365:inputs". */
     static final String INPUTS = "inputs";
-    /** Voice search (TCL Channel): on Home in place, elsewhere the voice panel. */
+    /** Voice search (TCL Channel): Home listens in place, brought to the front first from another app. */
     static final String VOICE = "voice";
     /** vPro: the Inputs list over the app on screen (InputsOverlayActivity), without going Home. */
     static final String INPUTS_OVERLAY = "inputs_overlay";
