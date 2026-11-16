@@ -32,8 +32,10 @@ public class InputKeyService extends AccessibilityService {
     /** The running helper, for voice search's presses in other apps (VoiceRun); null while it is off. Main thread. */
     private static InputKeyService running;
     private final Handler main = new Handler(Looper.getMainLooper());
-    /** SETTLE_MS: a page's focus is final; LAUNCH_MS: an app just launched takes links (Deezer errs before that). */
-    private static final long POLL_MS = 400, SETTLE_MS = 1500, LAUNCH_MS = 4000;
+    /** SETTLE_MS: a page's focus is final, or an app whose first page is drawn takes links. */
+    private static final long POLL_MS = 400, SETTLE_MS = 1500;
+    /** Texts on screen that mean an app's first page has loaded, not only its splash. */
+    private static final int LOADED_TEXTS = 5;
 
     @Override
     protected void onServiceConnected() {
@@ -95,7 +97,10 @@ public class InputKeyService extends AccessibilityService {
     // The screen is read only while voice search waits for a page (canRetrieveWindowContent, no event types): a short
     // poll of the window in front, then nothing.
 
-    /** Runs {@code then} once {@code pkg}'s window is in front and the app has started; false without the helper. */
+    /**
+     * Runs {@code then} once {@code pkg}'s first page has loaded (its window in front, with some text on it); false
+     * without the helper. Deezer crashes on a link that arrives while it is still starting.
+     */
     static boolean whenShown(String pkg, long timeoutMs, Runnable then) {
         InputKeyService s = running;
         if (s == null) return false;
@@ -103,8 +108,9 @@ public class InputKeyService extends AccessibilityService {
         s.main.post(new Runnable() {
             @Override
             public void run() {
-                if (pkg.equals(s.front())) {
-                    s.main.postDelayed(then, LAUNCH_MS);
+                AccessibilityNodeInfo root = s.getRootInActiveWindow();
+                if (root != null && pkg.contentEquals(root.getPackageName()) && texts(root, LOADED_TEXTS) >= LOADED_TEXTS) {
+                    s.main.postDelayed(then, SETTLE_MS);
                 } else if (SystemClock.uptimeMillis() < until) {
                     s.main.postDelayed(this, POLL_MS);
                 }
@@ -143,9 +149,13 @@ public class InputKeyService extends AccessibilityService {
         }, POLL_MS);
     }
 
-    private String front() {
-        AccessibilityNodeInfo root = getRootInActiveWindow();
-        return root == null || root.getPackageName() == null ? null : root.getPackageName().toString();
+    /** How many nodes under node show some text or description, counting up to max. */
+    private static int texts(AccessibilityNodeInfo node, int max) {
+        if (node == null) return 0;
+        int n = (node.getText() != null && node.getText().length() > 0)
+                || (node.getContentDescription() != null && node.getContentDescription().length() > 0) ? 1 : 0;
+        for (int i = 0; i < node.getChildCount() && n < max; i++) n += texts(node.getChild(i), max - n);
+        return n;
     }
 
     private static AccessibilityNodeInfo find(AccessibilityNodeInfo node, String text) {
