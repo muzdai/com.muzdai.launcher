@@ -6,11 +6,14 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -199,7 +202,7 @@ public final class VoiceSearchActivity extends Activity {
     /** "X is not installed" with its Play Store name and logo, fetched in the background; pkg null: not on Play. */
     private void showMissing(String pkg, String name) {
         clearResults();
-        hint.setText(null);
+        asDialog(true);
         ((TextView) findViewById(R.id.missingTitle)).setText(getString(R.string.voice_not_installed, name));
         TextView sub = findViewById(R.id.missingSub);
         ImageView icon = findViewById(R.id.missingIcon);
@@ -231,6 +234,22 @@ public final class VoiceSearchActivity extends Activity {
         rows.removeAllViews();
         rows.setVisibility(View.GONE);
         missing.setVisibility(View.GONE);
+        asDialog(false);
+    }
+
+    /**
+     * true: the small "not installed" dialog in the middle of the screen, sized to its content, with no microphone or
+     * words; false: the panel at the bottom with them.
+     */
+    private void asDialog(boolean dialog) {
+        View panel = findViewById(R.id.panel);
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) panel.getLayoutParams();
+        float d = getResources().getDisplayMetrics().density;
+        lp.width = dialog ? ViewGroup.LayoutParams.WRAP_CONTENT : Math.round(760 * d);
+        lp.gravity = dialog ? Gravity.CENTER : Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        lp.bottomMargin = dialog ? 0 : Math.round(48 * d);
+        panel.setLayoutParams(lp);
+        findViewById(R.id.header).setVisibility(dialog ? View.GONE : View.VISIBLE);
     }
 
     private boolean start(Intent i) {

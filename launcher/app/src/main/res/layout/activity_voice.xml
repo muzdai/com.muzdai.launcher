@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Voice search (VoiceSearchActivity): a glass panel at the bottom of the screen, over Home. -->
+<!-- Voice search (VoiceSearchActivity): a glass panel at the bottom of the screen, over Home. For "not installed" it
+     becomes a small dialog in the middle of the screen: no microphone or words, only the app and its buttons. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -17,6 +18,7 @@
         android:elevation="12dp">
 
         <LinearLayout
+            android:id="@+id/header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -81,42 +83,43 @@
             android:orientation="vertical"
             android:visibility="gone" />
 
+        <!-- "Not installed": as wide as the name needs, the buttons on the right edge. -->
         <LinearLayout
             android:id="@+id/missing"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:visibility="gone">
 
             <ImageView
                 android:id="@+id/missingIcon"
-                android:layout_width="88dp"
-                android:layout_height="88dp"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@null" />
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="18dp"
+                android:layout_marginStart="16dp"
                 android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/missingTitle"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:maxWidth="640dp"
                     android:textColor="#FFFFFFFF"
-                    android:textSize="20sp"
+                    android:textSize="18sp"
                     android:fontFamily="@string/font_medium" />
 
                 <TextView
                     android:id="@+id/missingSub"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:maxWidth="640dp"
                     android:textColor="#B3FFFFFF"
                     android:textSize="13sp"
                     android:fontFamily="@string/font_body"
@@ -126,7 +129,8 @@
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_gravity="end"
+                    android:layout_marginTop="14dp"
                     android:orientation="horizontal">
 
                     <TextView

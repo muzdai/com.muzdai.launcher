@@ -11,8 +11,8 @@ android {
         applicationId providers.gradleProperty('launcherApplicationId').getOrElse('com.muzdai.launcher')
         minSdk 26
         targetSdk 34
-        versionCode 21
-        versionName '1.4.0'
+        versionCode 22
+        versionName '1.4.1'
     }
 
     // Release signing from the environment (GitHub Actions secrets); without it the debug key signs, for local builds.
