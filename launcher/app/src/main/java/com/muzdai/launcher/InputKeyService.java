@@ -108,10 +108,17 @@ public class InputKeyService extends AccessibilityService {
         if (s == null) return false;
         long until = SystemClock.uptimeMillis() + timeoutMs;
         s.main.post(new Runnable() {
+            long since = -1;
+
             @Override
             public void run() {
                 AccessibilityNodeInfo root = s.getRootInActiveWindow();
-                if (root != null && pkg.contentEquals(root.getPackageName()) && texts(root, LOADED_TEXTS) >= LOADED_TEXTS) {
+                long now = SystemClock.uptimeMillis();
+                boolean front = root != null && pkg.contentEquals(root.getPackageName());
+                if (front && since < 0) since = now;
+                if (!front) since = -1;
+                // Loaded: some text on it, or in front for a while (a full screen player at rest shows two lines).
+                if (front && (texts(root, LOADED_TEXTS) >= LOADED_TEXTS || now - since >= 2 * SETTLE_MS)) {
                     s.main.postDelayed(then, SETTLE_MS);
                 } else if (SystemClock.uptimeMillis() < until) {
                     s.main.postDelayed(this, POLL_MS);
