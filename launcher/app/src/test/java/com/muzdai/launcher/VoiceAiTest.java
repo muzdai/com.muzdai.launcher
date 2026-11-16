@@ -47,6 +47,8 @@ public class VoiceAiTest {
         assertTrue(p.contains("- YouTube (com.google.android.youtube.tv)"));
         assertTrue(p.contains("Музыка по умолчанию: deezer.android.app"));
         assertTrue(p.endsWith("Команда: включи джо кокера"));
+        // Films and series with no app named are left to the launcher (Emby, then ALPAC), not to any installed app.
+        assertTrue(p.contains("для фильмов и сериалов — пусто"));
     }
 
     @Test public void fastNewFlashModelsComeFirst() {
