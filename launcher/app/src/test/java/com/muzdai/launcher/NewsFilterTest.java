@@ -20,7 +20,9 @@ public class NewsFilterTest {
         assertFalse(NewsFilter.blocked("https://www.pravda.com.ua"));
         assertFalse(NewsFilter.blocked("https://www.dw.com"));
         assertFalse(NewsFilter.blocked("https://www.bbc.com"));
-        assertFalse(NewsFilter.blocked("https://ru.themoscowtimes.com"));
+        assertTrue(NewsFilter.blocked("https://ru.themoscowtimes.com"));
+        assertTrue(NewsFilter.blocked("https://meduza.io"));
+        assertFalse(NewsFilter.blocked("https://www.svoboda.org"));
         assertFalse(NewsFilter.blocked("https://smart.com"));   // ends with "rt.com" but is not RT
         assertFalse(NewsFilter.blocked(null));
         assertEquals("www.dw.com", NewsFilter.host("https://WWW.DW.com:443/ru/?x=1"));

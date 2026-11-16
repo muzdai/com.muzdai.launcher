@@ -454,7 +454,7 @@ final class InfoWidgets {
     }
 
     private static String get(String address) throws Exception {
-        return get(address, "application/json", null);
+        return get(address, "application/json", null, 512 * 1024);
     }
 
     /**
@@ -463,10 +463,11 @@ final class InfoWidgets {
      */
     private static String getFeed(String address) throws Exception {
         return get(address, "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
-                "Mozilla/5.0 (Linux; Android 14; Google TV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36");
+                "Mozilla/5.0 (Linux; Android 14; Google TV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+                3 * 1024 * 1024);   // some outlets' feeds carry hundreds of items
     }
 
-    private static String get(String address, String accept, String agent) throws Exception {
+    private static String get(String address, String accept, String agent, int maxBytes) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(address).openConnection();
         try {
             c.setConnectTimeout(TIMEOUT_MS);
@@ -481,7 +482,7 @@ final class InfoWidgets {
                 int n, total = 0;
                 while ((n = in.read(buf)) > 0) {
                     total += n;
-                    if (total > 512 * 1024) throw new java.io.IOException("answer too large");
+                    if (total > maxBytes) throw new java.io.IOException("answer too large");
                     out.write(buf, 0, n);
                 }
                 return new String(out.toByteArray(), StandardCharsets.UTF_8);

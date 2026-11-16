@@ -14,7 +14,8 @@ import java.util.regex.Pattern;
 
 /**
  * The ticker's own sources, for when Google News refuses (it answers a shared VPN address with 429 for hours):
- * the outlets' RSS feeds, newest first, at most two headlines from one outlet. Pure text, tested on the JVM.
+ * Ukrainian and Western outlets' Russian-language RSS feeds, newest first, at most two headlines from one outlet.
+ * Pure text, tested on the JVM.
  */
 final class NewsFeeds {
     private NewsFeeds() { }
@@ -23,10 +24,11 @@ final class NewsFeeds {
     static final String[][] FEEDS = {
             {"https://rss.dw.com/xml/rss-ru-all", "DW"},
             {"https://feeds.bbci.co.uk/russian/rss.xml", "BBC News Русская служба"},
-            {"https://meduza.io/rss/all", "Meduza"},
             {"https://www.pravda.com.ua/rus/rss/view_news/", "Украинская правда"},
-            {"https://ru.themoscowtimes.com/rss/news", "The Moscow Times"},
-            {"https://novayagazeta.eu/feed/rss", "Новая газета Европа"},
+            {"https://www.rbc.ua/static/rss/all.rus.rss.xml", "РБК-Украина"},
+            {"https://www.svoboda.org/api/", "Радио Свобода"},
+            {"https://zn.ua/rss/full.rss", "Зеркало недели"},
+            {"https://www.obozrevatel.com/rss.xml", "Обозреватель"},
     };
 
     static final class Item {

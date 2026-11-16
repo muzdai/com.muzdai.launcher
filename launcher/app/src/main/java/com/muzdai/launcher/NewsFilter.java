@@ -5,7 +5,8 @@ import java.util.Locale;
 /**
  * Keeps Russian and openly pro-Russian outlets out of the news ticker, by the outlet's address in Google News'
  * {@code <source url>}: every .ru, .su and .рф site, and the known ones elsewhere (RT, Sputnik, TASS, EADaily, RTVI,
- * Baltnews, Russian outlets' mirror domains such as lenta.news and gazeta.press, Strana, Belarus state media).
+ * Baltnews, Russian outlets' mirror domains such as lenta.news and gazeta.press, Strana, Belarus state media), and
+ * Russian outlets working from abroad (Meduza, The Moscow Times, Novaya Gazeta Europe, Dozhd).
  */
 final class NewsFilter {
     private NewsFilter() { }
@@ -21,6 +22,8 @@ final class NewsFilter {
             "news-front.info", "news-front.su", "strana.ua", "strana.today", "strana.news", "ukraina.ru",
             "voennoedelo.com", "pravda.ru", "southfront.org", "belta.by", "sb.by", "ont.by", "tvr.by", "ctv.by",
             "belarus24.by", "rg.ru", "ria.ru",
+            // Russian outlets abroad: the owner wants no Russian media at all.
+            "meduza.io", "themoscowtimes.com", "novayagazeta.eu", "tvrain.tv", "zona.media", "istories.media",
     };
 
     /** True for an outlet the ticker leaves out; url is the source's address (or a bare host). */
