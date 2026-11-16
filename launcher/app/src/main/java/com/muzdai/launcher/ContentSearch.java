@@ -183,6 +183,19 @@ final class ContentSearch {
         return parseEmby(json, b, key);
     }
 
+    /** The owner's Emby item for a TMDB title ("movie" or "tv" and its id), whatever name the library gives it. */
+    static List<Card> embyByTmdb(String base, String key, String tmdbId) throws IOException {
+        String b = base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
+        return parseEmby(get(b + "/Items?Recursive=true&IncludeItemTypes=Movie,Series&AnyProviderIdEquals=Tmdb."
+                + enc(tmdbId) + "&api_key=" + enc(key), null), b, key);
+    }
+
+    /** The TMDB id at the end of an ALPAC card's link (alpac://title/movie/603), or null. */
+    static String tmdbId(Card alpac) {
+        int slash = alpac.uri.lastIndexOf('/');
+        return alpac.uri.startsWith("alpac://title/") && slash > 0 ? alpac.uri.substring(slash + 1) : null;
+    }
+
     static List<Card> parseEmby(String json, String base, String key) {
         List<Card> out = new ArrayList<>();
         try {

@@ -170,7 +170,11 @@ final class VoiceActions {
         if (app.isEmpty()) {
             if ("movie".equals(kind) || "series".equals(kind)) {
                 ContentSearch.Card c = one(EMBY, q);
-                return c != null ? c : one(ALPAC, q);
+                if (c != null) return c;
+                // The library may name it in another language: find it on TMDB and look it up in Emby by that id.
+                ContentSearch.Card tmdb = one(ALPAC, q);
+                ContentSearch.Card owned = tmdb == null ? null : embyByTmdb(ContentSearch.tmdbId(tmdb));
+                return owned != null ? owned : tmdb;
             }
             app = "music".equals(kind) ? musicApp() : YOUTUBE;
         }
@@ -194,6 +198,17 @@ final class VoiceActions {
             out.addAll(search(src, q, 8));
         }
         return out;
+    }
+
+    private ContentSearch.Card embyByTmdb(String tmdbId) {
+        VoiceKeys keys = VoiceKeys.load(ctx);
+        if (tmdbId == null || !installed(EMBY) || !keys.has(VoiceKeys.EMBY_URL, VoiceKeys.EMBY_KEY)) return null;
+        try {
+            List<ContentSearch.Card> r = ContentSearch.embyByTmdb(keys.get(VoiceKeys.EMBY_URL), keys.get(VoiceKeys.EMBY_KEY), tmdbId);
+            return r.isEmpty() ? null : r.get(0);
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
     }
 
     private ContentSearch.Card one(String app, String q) {

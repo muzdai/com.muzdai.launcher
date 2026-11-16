@@ -71,6 +71,7 @@ public class ContentSearchTest {
         assertEquals("https://image.tmdb.org/t/p/w342/p.jpg", cards.get(0).image);
         assertEquals("alpac://title/tv/236235", cards.get(1).uri);
         assertNull(cards.get(1).image);
+        assertEquals("236235", ContentSearch.tmdbId(cards.get(1)));
     }
 
     @Test public void keysFileIgnoresCommentsAndBlanks() {
