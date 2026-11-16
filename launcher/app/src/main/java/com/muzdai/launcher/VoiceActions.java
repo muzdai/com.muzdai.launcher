@@ -176,7 +176,11 @@ final class VoiceActions {
                 ContentSearch.Card owned = tmdb == null ? null : embyByTmdb(ContentSearch.tmdbId(tmdb));
                 return owned != null ? owned : tmdb;
             }
-            app = "music".equals(kind) ? musicApp() : YOUTUBE;
+            app = isMusic(kind) ? musicApp() : YOUTUBE;
+        }
+        if ("album".equals(kind)) {
+            ContentSearch.Card a = album(app, q);
+            if (a != null) return a;
         }
         return one(app, q);
     }
@@ -185,7 +189,7 @@ final class VoiceActions {
     private List<ContentSearch.Card> cards(String app, String kind, String q) {
         String[] sources;
         if (!app.isEmpty()) sources = new String[]{app};
-        else if ("music".equals(kind)) sources = new String[]{musicApp(), SPOTIFY, DEEZER, YOUTUBE};
+        else if (isMusic(kind)) sources = new String[]{musicApp(), SPOTIFY, DEEZER, YOUTUBE};
         else if ("movie".equals(kind) || "series".equals(kind)) sources = new String[]{EMBY, ALPAC, YOUTUBE};
         else if ("video".equals(kind)) sources = new String[]{YOUTUBE};
         else sources = new String[]{YOUTUBE, EMBY, ALPAC};
@@ -200,6 +204,27 @@ final class VoiceActions {
         return out;
     }
 
+    private static boolean isMusic(String kind) {
+        return "music".equals(kind) || "album".equals(kind);
+    }
+
+    /** A whole album, started from its first track: Qobuz, Spotify and Deezer; null elsewhere or when not found. */
+    private ContentSearch.Card album(String app, String q) {
+        try {
+            VoiceKeys keys = VoiceKeys.load(ctx);
+            List<ContentSearch.Card> r = null;
+            if (QOBUZ.equals(app) && installed(QOBUZ)) return ContentSearch.qobuz(q, true);
+            if (SPOTIFY.equals(app) && installed(SPOTIFY) && keys.has(VoiceKeys.SPOTIFY_ID, VoiceKeys.SPOTIFY_SECRET)) {
+                r = ContentSearch.spotifyAlbums(keys.get(VoiceKeys.SPOTIFY_ID), keys.get(VoiceKeys.SPOTIFY_SECRET), q, 1);
+            } else if (DEEZER.equals(app) && installed(DEEZER)) {
+                r = ContentSearch.deezerAlbums(q, 1);
+            }
+            return r == null || r.isEmpty() ? null : r.get(0);
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
     private ContentSearch.Card embyByTmdb(String tmdbId) {
         VoiceKeys keys = VoiceKeys.load(ctx);
         if (tmdbId == null || !installed(EMBY) || !keys.has(VoiceKeys.EMBY_URL, VoiceKeys.EMBY_KEY)) return null;
@@ -212,7 +237,7 @@ final class VoiceActions {
     }
 
     private ContentSearch.Card one(String app, String q) {
-        if (QOBUZ.equals(app)) return installed(QOBUZ) ? ContentSearch.qobuz(q) : null;
+        if (QOBUZ.equals(app)) return installed(QOBUZ) ? ContentSearch.qobuz(q, false) : null;
         List<ContentSearch.Card> r = search(app, q, 1);
         return r.isEmpty() ? null : r.get(0);
     }

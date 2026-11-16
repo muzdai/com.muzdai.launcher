@@ -39,4 +39,7 @@
     <string name="s_voice_ai_failed">The key does not work, or there is no internet</string>
     <string name="s_voice_music">Music</string>
     <string name="s_voice_music_app">Default music app</string>
+    <string name="mini_player_expand">Back to full screen</string>
+    <string name="mini_player_close">Stop and close</string>
+    <string name="media_listener">vPro Launcher: now playing</string>
 </resources>

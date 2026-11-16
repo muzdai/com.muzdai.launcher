@@ -129,6 +129,34 @@ final class ContentSearch {
         }
     }
 
+    /** Albums: the album page opens with focus on Play, which the remote's OK starts (PRESS_OK). */
+    static List<Card> spotifyAlbums(String id, String secret, String q, int max) throws IOException {
+        String token = spotifyToken(id, secret);
+        return parseSpotifyAlbums(get("https://api.spotify.com/v1/search?type=album&limit=" + max + "&q=" + enc(q),
+                "Bearer " + token));
+    }
+
+    static List<Card> parseSpotifyAlbums(String json) {
+        List<Card> out = new ArrayList<>();
+        try {
+            JSONArray items = new JSONObject(json).getJSONObject("albums").getJSONArray("items");
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject a = items.optJSONObject(i);
+                if (a == null) continue;
+                JSONArray artists = a.optJSONArray("artists");
+                String artist = artists != null && artists.length() > 0 ? artists.getJSONObject(0).optString("name") : "";
+                JSONArray images = a.optJSONArray("images");
+                String image = images != null && images.length() > 0
+                        ? images.getJSONObject(Math.min(1, images.length() - 1)).optString("url") : null;
+                out.add(new Card(VoiceActions.SPOTIFY, "spotify:album:" + a.getString("id"), a.optString("name"),
+                        artist, image, InputKeyService.PRESS_OK, false));
+            }
+        } catch (JSONException ignored) {
+            // no albums
+        }
+        return out;
+    }
+
     static List<Card> parseSpotify(String json) {
         List<Card> out = new ArrayList<>();
         try {
@@ -153,10 +181,34 @@ final class ContentSearch {
 
     /**
      * Qobuz has no links or open search API: the card carries the words, and VoiceRun has InputKeyService type them
-     * into the app's search and press the first track. An empty uri marks that.
+     * into the app's search and press the first track, or the album (QOBUZ_ALBUM) and its Play. The uri is no link,
+     * only "qobuz:track" or "qobuz:album".
      */
-    static Card qobuz(String q) {
-        return new Card(VoiceActions.QOBUZ, "", q, null, null, q, true);
+    static final String QOBUZ_TRACK = "qobuz:track", QOBUZ_ALBUM = "qobuz:album";
+
+    static Card qobuz(String q, boolean album) {
+        return new Card(VoiceActions.QOBUZ, album ? QOBUZ_ALBUM : QOBUZ_TRACK, q, null, null, q, true);
+    }
+
+    /** Albums: Deezer's album page opens with focus on Listen, which is pressed. */
+    static List<Card> deezerAlbums(String q, int max) throws IOException {
+        return parseDeezerAlbums(get("https://api.deezer.com/search/album?limit=" + max + "&q=" + enc(q), null));
+    }
+
+    static List<Card> parseDeezerAlbums(String json) {
+        List<Card> out = new ArrayList<>();
+        try {
+            JSONArray data = new JSONObject(json).getJSONArray("data");
+            for (int i = 0; i < data.length(); i++) {
+                JSONObject a = data.getJSONObject(i);
+                String artist = a.optJSONObject("artist") == null ? "" : a.getJSONObject("artist").optString("name");
+                out.add(new Card(VoiceActions.DEEZER, "https://www.deezer.com/album/" + a.optLong("id"),
+                        a.optString("title"), artist, a.optString("cover_medium", null), "", true));
+            }
+        } catch (JSONException ignored) {
+            // no albums
+        }
+        return out;
     }
 
     static List<Card> deezer(String q, int max) throws IOException {

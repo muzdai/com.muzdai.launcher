@@ -9,7 +9,9 @@ import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -123,6 +125,14 @@ public class InputKeyService extends AccessibilityService {
      * Once {@code pkg}'s page is in front, presses its focused button ({@code text} empty: Play, Watch, Continue) or the
      * row whose text or description is {@code text} or starts with "{@code text},". Gives up after the timeout.
      */
+    /** press(): a click target given by view id (a Compose testTag) instead of text, as "id:player-card". */
+    static final String BY_ID = "id:";
+    /**
+     * press(): no node to click, the remote's OK once the page has settled (Spotify draws its album page without
+     * accessibility nodes, with focus on Play).
+     */
+    static final String PRESS_OK = "#ok";
+
     static void press(String pkg, String text, long timeoutMs) {
         InputKeyService s = running;
         if (s == null) return;
@@ -137,8 +147,15 @@ public class InputKeyService extends AccessibilityService {
                 if (root != null && pkg.contentEquals(root.getPackageName())) {
                     if (since < 0) since = now;
                     // The focused button only once the page has settled: before that focus may still be on a menu.
+                    if (PRESS_OK.equals(text)) {
+                        if (now - since >= 2 * SETTLE_MS && android.os.Build.VERSION.SDK_INT >= 33
+                                && s.performGlobalAction(GLOBAL_ACTION_DPAD_CENTER)) return;
+                        if (now < until) s.main.postDelayed(this, POLL_MS);
+                        return;
+                    }
                     AccessibilityNodeInfo target = text.isEmpty()
                             ? (now - since >= SETTLE_MS ? root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) : null)
+                            : text.startsWith(BY_ID) ? byViewId(root, text.substring(BY_ID.length()))
                             : find(root, text);
                     if (target != null && click(target)) return;
                 } else {
@@ -150,46 +167,78 @@ public class InputKeyService extends AccessibilityService {
     }
 
     /**
-     * Qobuz has no links: in its window, opens Search (the "navbar-search" tab), writes {@code query} into the search
-     * field and, once results show, presses the first track ("Track • Artist • Album"), which starts it, as OK does.
-     * Gives up after the timeout.
+     * Qobuz has no links, so voice search works its screens: back out of the full screen player if it is up, open
+     * Search (the "navbar-search" tab), write {@code query} into the search field (results show as it changes) and press
+     * the first track ("Track • Artist • Album"), or with {@code album} the album card whose title is in the query (else
+     * the first album) and then its focused Play. Last, the mini player at the top ("player-card") opens the full screen
+     * player. Gives up after the timeout.
      */
-    static void searchAndPlayTrack(String pkg, String query, long timeoutMs) {
+    static void qobuz(String pkg, String query, boolean album, long timeoutMs) {
         InputKeyService s = running;
         if (s == null) return;
         long until = SystemClock.uptimeMillis() + timeoutMs;
         s.main.post(new Runnable() {
-            int step;
-            long typedAt;
+            static final int FIND_SEARCH = 0, TYPE = 1, PICK = 2, PLAY_ALBUM = 3, FULL_SCREEN = 4;
+            int step = FIND_SEARCH, backs;
+            long stepAt = SystemClock.uptimeMillis();
+
+            void next(int to) {
+                step = to;
+                stepAt = SystemClock.uptimeMillis();
+            }
 
             @Override
             public void run() {
                 AccessibilityNodeInfo root = s.getRootInActiveWindow();
+                long now = SystemClock.uptimeMillis(), inStep = now - stepAt;
                 if (root != null && pkg.contentEquals(root.getPackageName())) {
-                    if (step == 0) {
-                        AccessibilityNodeInfo field = editText(root);
-                        if (field != null) {
-                            step = 1;
-                        } else {
+                    switch (step) {
+                        case FIND_SEARCH: {
                             AccessibilityNodeInfo tab = byViewId(root, "navbar-search");
-                            if (tab != null) click(tab);
+                            if (editText(root) != null) {
+                                next(TYPE);
+                            } else if (tab != null) {
+                                click(tab);
+                            } else if (inStep >= SETTLE_MS && backs < 3) {
+                                // The full screen player (or another page without the tab bar) is up: back out.
+                                s.performGlobalAction(GLOBAL_ACTION_BACK);
+                                backs++;
+                                stepAt = now;
+                            }
+                            break;
                         }
-                    }
-                    if (step == 1) {
-                        AccessibilityNodeInfo field = editText(root);
-                        android.os.Bundle args = new android.os.Bundle();
-                        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, query);
-                        if (field != null && field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
-                            step = 2;
-                            typedAt = SystemClock.uptimeMillis();
+                        case TYPE: {
+                            AccessibilityNodeInfo field = editText(root);
+                            android.os.Bundle args = new android.os.Bundle();
+                            args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, query);
+                            if (field != null && field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) next(PICK);
+                            break;
                         }
-                    } else if (step == 2 && SystemClock.uptimeMillis() - typedAt >= SETTLE_MS) {
-                        // Not sooner: results of an earlier search may still be on screen.
-                        AccessibilityNodeInfo track = firstTrack(root);
-                        if (track != null && click(track)) return;
+                        case PICK: {
+                            // Not sooner: results of an earlier search may still be on screen.
+                            if (inStep < SETTLE_MS) break;
+                            AccessibilityNodeInfo hit = album ? bestAlbum(root, query) : firstLabelled(root, TRACK);
+                            if (hit != null && click(hit)) next(album ? PLAY_ALBUM : FULL_SCREEN);
+                            break;
+                        }
+                        case PLAY_ALBUM: {
+                            // The album page opens with focus on its Play button.
+                            if (inStep < SETTLE_MS || byViewId(root, "navbar-search") != null) break;
+                            AccessibilityNodeInfo play = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+                            if (play != null && click(play)) next(FULL_SCREEN);
+                            break;
+                        }
+                        case FULL_SCREEN: {
+                            if (inStep < SETTLE_MS) break;
+                            AccessibilityNodeInfo card = byViewId(root, "player-card");
+                            if (card != null && click(card)) return;
+                            break;
+                        }
+                        default:
+                            return;
                     }
                 }
-                if (SystemClock.uptimeMillis() < until) s.main.postDelayed(this, POLL_MS);
+                if (now < until) s.main.postDelayed(this, POLL_MS);
             }
         });
     }
@@ -215,21 +264,69 @@ public class InputKeyService extends AccessibilityService {
         return null;
     }
 
-    /** The first search result labelled as a track, in screen order. */
-    private static AccessibilityNodeInfo firstTrack(AccessibilityNodeInfo node) {
+    private static final String[] TRACK = {"track •", "трек •"}, ALBUM = {"album •", "альбом •"};
+
+    /** The first search result labelled as a track (or album), in screen order. */
+    private static AccessibilityNodeInfo firstLabelled(AccessibilityNodeInfo node, String[] kind) {
         if (node == null) return null;
-        if (isTrackLabel(node.getText())) return node;
+        if (isLabel(node.getText(), kind)) return node;
         for (int i = 0; i < node.getChildCount(); i++) {
-            AccessibilityNodeInfo hit = firstTrack(node.getChild(i));
+            AccessibilityNodeInfo hit = firstLabelled(node.getChild(i), kind);
             if (hit != null) return hit;
         }
         return null;
     }
 
-    static boolean isTrackLabel(CharSequence s) {
+    /**
+     * The album card whose title (the text just before its "Album • Artist" label) is in the query, as Qobuz's top
+     * results put other albums of the artist first; the first album when none is.
+     */
+    private static AccessibilityNodeInfo bestAlbum(AccessibilityNodeInfo root, String query) {
+        List<AccessibilityNodeInfo> labels = new ArrayList<>();
+        collectLabelled(root, ALBUM, labels);
+        for (AccessibilityNodeInfo label : labels) {
+            AccessibilityNodeInfo parent = label.getParent();
+            if (parent == null) continue;
+            for (int i = 0; i < parent.getChildCount(); i++) {
+                AccessibilityNodeInfo c = parent.getChild(i);
+                if (c != null && c.getText() != null && !isLabel(c.getText(), ALBUM)
+                        && titleInQuery(c.getText().toString(), query)) {
+                    return label;
+                }
+            }
+        }
+        return labels.isEmpty() ? null : labels.get(0);
+    }
+
+    private static void collectLabelled(AccessibilityNodeInfo node, String[] kind, List<AccessibilityNodeInfo> out) {
+        if (node == null) return;
+        if (isLabel(node.getText(), kind)) out.add(node);
+        for (int i = 0; i < node.getChildCount(); i++) collectLabelled(node.getChild(i), kind, out);
+    }
+
+    /** "The Wall" in "Pink Floyd The Wall", ignoring case, punctuation and a "(Remastered)" tail. */
+    static boolean titleInQuery(String title, String query) {
+        String t = squash(title.replaceAll("\\s*[(\\[].*$", ""));
+        return !t.isEmpty() && (" " + squash(query) + " ").contains(" " + t + " ");
+    }
+
+    private static String squash(String s) {
+        return s.toLowerCase(java.util.Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
+    }
+
+    static boolean isLabel(CharSequence s, String[] kind) {
         if (s == null) return false;
         String v = s.toString().trim().toLowerCase(java.util.Locale.ROOT);
-        return v.startsWith("track •") || v.startsWith("трек •");
+        for (String k : kind) if (v.startsWith(k)) return true;
+        return false;
+    }
+
+    static boolean isTrackLabel(CharSequence s) {
+        return isLabel(s, TRACK);
+    }
+
+    static boolean isAlbumLabel(CharSequence s) {
+        return isLabel(s, ALBUM);
     }
 
     /** How many nodes under node show some text or description, counting up to max. */

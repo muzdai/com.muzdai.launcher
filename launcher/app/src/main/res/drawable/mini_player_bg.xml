@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Home mini player's slab: the top bar pills' resting look (pill_bg), with the same 21dp ends. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient android:angle="270" android:startColor="#2EFFFFFF" android:endColor="#14FFFFFF" />
+    <stroke android:width="1dp" android:color="#38FFFFFF" />
+    <corners android:radius="21dp" />
+</shape>

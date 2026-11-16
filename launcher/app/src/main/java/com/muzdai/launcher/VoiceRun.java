@@ -30,7 +30,7 @@ final class VoiceRun {
             if (launch != null && start(app, launch)) {
                 // The link only once the app's own window is up; without the helper, after a fixed wait.
                 if (!InputKeyService.whenShown(card.pkg, WAIT_MS, () -> openAndPress(app, card, link))
-                        && !card.uri.isEmpty()) {
+                        && !isQobuz(card)) {
                     new Handler(Looper.getMainLooper()).postDelayed(() -> start(app, link), 8000);
                 }
                 return;
@@ -40,12 +40,16 @@ final class VoiceRun {
     }
 
     private static void openAndPress(Context app, ContentSearch.Card card, Intent link) {
-        if (card.uri.isEmpty()) {   // no link (Qobuz): the words go into the app's own search
-            InputKeyService.searchAndPlayTrack(card.pkg, card.click, WAIT_MS);
+        if (isQobuz(card)) {   // no link: the words go into the app's own search
+            InputKeyService.qobuz(card.pkg, card.click, ContentSearch.QOBUZ_ALBUM.equals(card.uri), 2 * WAIT_MS);
             return;
         }
         if (!start(app, link) || card.click == null) return;
         InputKeyService.press(card.pkg, card.click, WAIT_MS);
+    }
+
+    private static boolean isQobuz(ContentSearch.Card card) {
+        return card.uri.startsWith("qobuz:");
     }
 
     static Intent link(ContentSearch.Card card) {

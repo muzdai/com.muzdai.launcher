@@ -100,6 +100,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private AppAdapter adapter;
     private RecyclerView grid;
     private FrameLayout root;
+    /** What an app plays behind Home, above the top bar's round buttons. */
+    private MiniPlayer miniPlayer;
     private WallpaperPlayer wallpaperPlayer;
     private GlassView glass;
     private TextView heroName;
@@ -595,7 +597,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // jump to a tile far below when there is nothing in that direction.
         View.OnKeyListener pillKeys = (v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
-            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return true;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                if (miniPlayer != null) miniPlayer.focus();   // the mini player above, when something plays
+                return true;
+            }
             if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
                 // Back to the dock tile Up came from, not wherever the focus finder lands.
                 focusTile(lastFocused % COLUMNS);
@@ -610,6 +615,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == firstButton;
             return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == R.id.btnSettings;
         };
+        miniPlayer = new MiniPlayer(this, root, findViewById(R.id.topButtons));
         btnInputs.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
@@ -767,6 +773,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             root.removeCallbacks(infoTick);
             root.post(infoTick);
         }
+        if (miniPlayer != null) miniPlayer.start();
         // Something changed in Launcher settings: rebuild with it, however the settings were left. Only Back
         // delivered their RESULT_OK; Home (the remote's button) clears them off this task and the result comes
         // back cancelled, so a new wallpaper or layout waited for the next process start.
@@ -944,6 +951,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         resumed = false;
         if (inFront == this) inFront = null;
         if (root != null) root.removeCallbacks(infoTick);
+        if (miniPlayer != null) miniPlayer.stop();
         if (newsTicker != null) newsTicker.setRunning(false);
         // No UP reaches a paused Home, so a vendor-key hold it saw go down would still open its app later.
         // Only Home's own share is dropped: a key service that saw the same DOWN keeps its hold.

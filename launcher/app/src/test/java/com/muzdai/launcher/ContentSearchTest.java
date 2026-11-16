@@ -75,15 +75,34 @@ public class ContentSearchTest {
     }
 
     @Test public void qobuzCardTypesTheWordsIntoTheAppsSearch() {
-        ContentSearch.Card c = ContentSearch.qobuz("Joe Cocker With A Little Help");
+        ContentSearch.Card c = ContentSearch.qobuz("Joe Cocker With A Little Help", false);
         assertEquals("com.qobuz.music", c.pkg);
-        assertEquals("", c.uri);
+        assertEquals("qobuz:track", c.uri);
+        assertEquals("qobuz:album", ContentSearch.qobuz("Pink Floyd The Wall", true).uri);
         assertEquals("Joe Cocker With A Little Help", c.click);
         assertTrue(c.launchFirst);
         assertTrue(InputKeyService.isTrackLabel("Track • Joe Cocker • With A Little Help From My Friends"));
         assertTrue(InputKeyService.isTrackLabel("Трек • Джо Кокер"));
         assertFalse(InputKeyService.isTrackLabel("Album • Joe Cocker"));
         assertFalse(InputKeyService.isTrackLabel(null));
+        assertTrue(InputKeyService.isAlbumLabel("Album • Pink Floyd"));
+        assertTrue(InputKeyService.titleInQuery("The Wall", "Pink Floyd The Wall"));
+        assertTrue(InputKeyService.titleInQuery("The Wall (Remastered)", "pink floyd the wall"));
+        assertFalse(InputKeyService.titleInQuery("The Later Years", "Pink Floyd The Wall"));
+        assertFalse(InputKeyService.titleInQuery("Wall", "Pink Floyd The Wallflowers"));
+    }
+
+    @Test public void albumsOpenTheirPageAndStartFromTheFirstTrack() {
+        ContentSearch.Card s = ContentSearch.parseSpotifyAlbums("{\"albums\":{\"items\":[{\"id\":\"5Dbax7G8SWrP9xyzkOvy2F\","
+                + "\"name\":\"The Wall\",\"artists\":[{\"name\":\"Pink Floyd\"}],\"images\":[{\"url\":\"a\"},{\"url\":\"b\"}]}]}}").get(0);
+        assertEquals("spotify:album:5Dbax7G8SWrP9xyzkOvy2F", s.uri);
+        assertEquals(InputKeyService.PRESS_OK, s.click);
+        assertEquals("b", s.image);
+        ContentSearch.Card d = ContentSearch.parseDeezerAlbums("{\"data\":[{\"id\":12114248,\"title\":\"The Wall\","
+                + "\"artist\":{\"name\":\"Pink Floyd\"},\"cover_medium\":\"c\"}]}").get(0);
+        assertEquals("https://www.deezer.com/album/12114248", d.uri);
+        assertEquals("", d.click);
+        assertTrue(d.launchFirst);
     }
 
     @Test public void keysFileIgnoresCommentsAndBlanks() {

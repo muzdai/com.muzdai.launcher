@@ -38,4 +38,7 @@
     <string name="s_voice_ai_failed">Ключ не работает или нет интернета</string>
     <string name="s_voice_music">Музыка</string>
     <string name="s_voice_music_app">Музыкальное приложение по умолчанию</string>
+    <string name="mini_player_expand">Развернуть на весь экран</string>
+    <string name="mini_player_close">Остановить и закрыть</string>
+    <string name="media_listener">vPro Launcher: что играет</string>
 </resources>
