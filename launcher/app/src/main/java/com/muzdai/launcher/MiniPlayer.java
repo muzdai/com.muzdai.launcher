@@ -1,7 +1,5 @@
 package com.muzdai.launcher;
 
-import android.animation.ObjectAnimator;
-import android.animation.ValueAnimator;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -19,7 +17,6 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.LinearInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -33,14 +30,11 @@ import java.util.List;
 
 /**
  * Home's mini player: while an app plays music behind Home, a slab above the top bar's round buttons, as tall as they
- * are and spanning the first to the last, with the same round ends. Inside: the cover as a turning record (when the
- * track has one), "Artist — Title" as a marquee, and two buttons: back to the app's full screen, and stop and close the
+ * are and spanning the first to the last, with the same round ends. Inside: the round cover (when the track has one), "Artist — Title" as a marquee, and two buttons: back to the app's full screen, and stop and close the
  * app. Sessions come from MediaSessionManager through MediaListener; com.tcl.tv's session (always "playing" for the
  * Assistant) is left out.
  */
 final class MiniPlayer {
-    private static final long SPIN_MS = 9000;
-
     private final MainActivity act;
     private final FrameLayout root;
     private final ViewGroup bar;
@@ -51,7 +45,6 @@ final class MiniPlayer {
     private final DiscView disc;
     private final TextView text;
     private final ImageButton expand, close;
-    private final ObjectAnimator spin;
 
     private MediaSessionManager sessions;
     private final List<MediaController> watched = new ArrayList<>();
@@ -137,10 +130,6 @@ final class MiniPlayer {
         close.setOnKeyListener(keys);
 
         root.addView(slab, new FrameLayout.LayoutParams(0, dp(42)));
-        spin = ObjectAnimator.ofFloat(disc, View.ROTATION, 0f, 360f);
-        spin.setDuration(SPIN_MS);
-        spin.setRepeatCount(ValueAnimator.INFINITE);
-        spin.setInterpolator(new LinearInterpolator());
     }
 
     private ImageButton button(int icon, int label) {
@@ -192,7 +181,6 @@ final class MiniPlayer {
         for (MediaController c : watched) c.unregisterCallback(callback);
         watched.clear();
         current = null;
-        spin.cancel();
         slab.setVisibility(View.GONE);
     }
 
@@ -236,7 +224,6 @@ final class MiniPlayer {
                 View below = lastButton();
                 if (below != null) below.requestFocus();
             }
-            spin.cancel();
             slab.setVisibility(View.GONE);
             return;
         }
@@ -266,7 +253,7 @@ final class MiniPlayer {
         return null;
     }
 
-    /** The cover as a turning record, or no record when the track has no cover. */
+    /** The round cover, or none when the track has no cover. */
     private void showArt(String pkg, MediaMetadata m) {
         Bitmap b = null;
         String uri = null;
@@ -301,8 +288,6 @@ final class MiniPlayer {
     private void setArt(Bitmap b) {
         disc.setBitmap(b);
         disc.setVisibility(b != null ? View.VISIBLE : View.GONE);
-        if (b != null && !spin.isStarted()) spin.start();
-        if (b == null) spin.cancel();
     }
 
     private Bitmap load(String uri) {
@@ -418,7 +403,6 @@ final class MiniPlayer {
         View below = lastButton();
         if (below != null) below.requestFocus();
         current = null;
-        spin.cancel();
         slab.setVisibility(View.GONE);
         Context app = act.getApplicationContext();
         new Thread(() -> LocalAdb.forceStop(app, pkg), "mini-player-close").start();

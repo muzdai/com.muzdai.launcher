@@ -9,31 +9,23 @@ import android.graphics.Paint;
 import android.graphics.Shader;
 import android.view.View;
 
-/** A track's cover as a record: round, with faint grooves and a spindle hole. Turned by its owner while playing. */
+/** A track's cover in a circle, centre-cropped, with a faint rim. Still: a turning cover shimmers on the TV. */
 final class DiscView extends View {
     private final Paint cover = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-    private final Paint groove = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint hole = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Bitmap bitmap;
 
     DiscView(Context ctx) {
         super(ctx);
-        groove.setStyle(Paint.Style.STROKE);
-        hole.setColor(0xFF101010);
         rim.setStyle(Paint.Style.STROKE);
+        rim.setColor(0x40FFFFFF);
     }
 
     void setBitmap(Bitmap b) {
         bitmap = b;
-        if (b != null) cover.setShader(new BitmapShader(b, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
-        else cover.setShader(null);
+        cover.setShader(b == null ? null : new BitmapShader(b, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
         placeShader();
         invalidate();
-    }
-
-    boolean hasBitmap() {
-        return bitmap != null;
     }
 
     @Override
@@ -41,7 +33,6 @@ final class DiscView extends View {
         placeShader();
     }
 
-    /** Centre-crops the cover into the circle. */
     private void placeShader() {
         if (bitmap == null || getWidth() == 0) return;
         float size = Math.min(getWidth(), getHeight());
@@ -57,19 +48,8 @@ final class DiscView extends View {
         if (bitmap == null) return;
         float cx = getWidth() / 2f, cy = getHeight() / 2f, r = Math.min(cx, cy);
         c.drawCircle(cx, cy, r, cover);
-        float stroke = Math.max(1f, r * 0.03f);
-        groove.setStrokeWidth(stroke);
-        for (float f = 0.92f; f > 0.35f; f -= 0.14f) {
-            groove.setColor(0x26000000);
-            c.drawCircle(cx, cy, r * f, groove);
-            groove.setColor(0x14FFFFFF);
-            c.drawCircle(cx, cy, r * f - stroke, groove);
-        }
-        c.drawCircle(cx, cy, r * 0.16f, hole);
+        float stroke = Math.max(1f, getResources().getDisplayMetrics().density);
         rim.setStrokeWidth(stroke);
-        rim.setColor(0x66FFFFFF);
-        c.drawCircle(cx, cy, r * 0.16f, rim);
-        rim.setColor(0x40FFFFFF);
         c.drawCircle(cx, cy, r - stroke / 2f, rim);
     }
 }
