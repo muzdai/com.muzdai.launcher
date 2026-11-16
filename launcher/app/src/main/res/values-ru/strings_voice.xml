@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_search">Голосовой поиск</string>
+    <string name="voice_hint_type">Скажите или введите, что найти</string>
+    <string name="voice_starting">Включаю микрофон…</string>
+    <string name="voice_listening">Говорите…</string>
+    <string name="voice_recognizing">Распознаю…</string>
+    <string name="voice_choose">Выберите, где искать</string>
+    <string name="voice_err_nomatch">Не расслышал, попробуйте ещё раз</string>
+    <string name="voice_err_permission">Нет доступа к микрофону</string>
+    <string name="voice_err_network">Распознавание недоступно: нет связи</string>
+    <string name="voice_err_busy">Микрофон занят, попробуйте через пару секунд</string>
+    <string name="voice_err_other">Ошибка распознавания (%1$d)</string>
+    <string name="voice_no_recognizer">Распознавание речи на этом ТВ недоступно</string>
+    <string name="voice_search_in">Искать в %1$s</string>
+    <string name="voice_tv_programme">Программе передач</string>
+    <string name="voice_find_app">Найти «%1$s» в Play Market</string>
+    <string name="voice_not_installed">%1$s не установлен</string>
+    <string name="voice_not_on_play">Нет в Play Market</string>
+    <string name="voice_looking_up">Ищу в Play Market…</string>
+    <string name="voice_play_market">Play Market</string>
+    <string name="cancel">Отмена</string>
+</resources>

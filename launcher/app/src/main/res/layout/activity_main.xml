@@ -177,6 +177,14 @@
                     android:drawableStart="@drawable/ic_apps_pill"
                     android:nextFocusDown="@+id/grid" />
 
+                <!-- Voice search; MainActivity keeps it right of the App library button. -->
+                <TextView
+                    android:id="@+id/btnVoice"
+                    style="@style/TopButtonIcon"
+                    android:contentDescription="@string/voice_search"
+                    android:drawableStart="@drawable/ic_mic"
+                    android:nextFocusDown="@+id/grid" />
+
                 <TextView
                     android:id="@+id/btnSettings"
                     style="@style/TopButton"

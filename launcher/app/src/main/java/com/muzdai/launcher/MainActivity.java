@@ -563,6 +563,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 bar.addView(btnLibraryTop, 0);
             }
         }
+        btnVoice = findViewById(R.id.btnVoice);
+        btnVoice.setOnClickListener(v -> openVoiceSearch());
+        // Right of the App library button ("All apps"), wherever library_button_left put that.
+        ViewGroup topBar = (ViewGroup) btnVoice.getParent();
+        topBar.removeView(btnVoice);
+        topBar.addView(btnVoice, topBar.indexOfChild(btnLibraryTop) + 1);
         addTopBarApps(cfg.topBarApps, cfg.launchActions);
         iconOnlyButtons = cfg.iconOnlyButtons;
         wifiIconOnly = iconOnlyButtons && cfg.wifiLabelWidth <= 0;
@@ -608,9 +614,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnWifi.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
         btnLibraryTop.setOnKeyListener(pillKeys);
+        btnVoice.setOnKeyListener(pillKeys);
         for (View button : topAppButtons) button.setOnKeyListener(pillKeys);
         if (advancedEffects) {
-            List<View> pills = new ArrayList<>(Arrays.asList(btnInputs, btnWifi, btnLibraryTop, btnSettings));
+            List<View> pills = new ArrayList<>(Arrays.asList(btnInputs, btnWifi, btnLibraryTop, btnVoice, btnSettings));
             pills.addAll(topAppButtons);
             for (View button : pills) {
                 button.setOnFocusChangeListener((view, focused) -> view.animate()
@@ -940,6 +947,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Only Home's own share is dropped: a key service that saw the same DOWN keeps its hold.
         RemoteKeys.release(this);
         cancelHoldOk();
+        cancelHoldRight();
         endReorder();   // Home or another app while reordering keeps the order so far
         wallpaperPlayer.stop();
         hero.animate().cancel();
@@ -991,6 +999,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (libraryFocusPending && appLibrary == null) focusLibrary();
         } else {
             cancelHoldOk();   // a dialog or another window took the remote while OK was held
+            cancelHoldRight();
         }
     }
 
@@ -999,6 +1008,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onDestroy();
         RemoteKeys.release(this);
         cancelHoldOk();
+        cancelHoldRight();
         unregisterReceiver(packageReceiver);
         if (openOnStartOnWake) unregisterReceiver(wakeReceiver);
         wallpaperPlayer.close();
@@ -1027,6 +1037,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // taken after that would arm one nothing releases.
         if (resumed && event.getKeyCode() >= 1000 && RemoteKeys.handle(this, event, homeAppKeys.get(event.getKeyCode()),
                 homeHoldAppKeys.get(event.getKeyCode()))) return true;
+        if (holdRight(event)) return true;
         if (holdOk(event)) return true;
         if (tileMenuEnabled && !reordering && openPopup == null
                 && event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
@@ -2097,6 +2108,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private ColorStateList wifiNoInternetTint, wifiOfflineTint;
     /** The app library button in the top bar (library_button). */
     private View btnLibraryTop;
+    /** Voice search, right of the App library button. */
+    private View btnVoice;
     /** The open library came from that button: closing it returns there instead of scrolling to the grid's end. */
     private boolean libraryFromTopBar;
 
@@ -2527,6 +2540,53 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * behind another screen. An interrupted press still counts as handled: its UP, if it comes back here, is eaten
      * rather than opening the tile.
      */
+    // ---- hold Right: voice search -------------------------------------------------------------------
+    // As in com.tcl.tv: Right held on Home opens voice search. The first press still moves focus as usual; the auto-repeats
+    // that follow are swallowed while the hold is timed, so a held Right does not run along the dock first.
+
+    private static final long HOLD_RIGHT_MS = 600;
+    private boolean holdRightArmed, holdRightFired;
+    private final Runnable holdRightTimer = () -> {
+        if (!holdRightArmed) return;
+        holdRightArmed = false;
+        holdRightFired = true;
+        openVoiceSearch();
+    };
+
+    /** True when the event belongs to a held Right and must not move focus. */
+    private boolean holdRight(KeyEvent event) {
+        if (event.getKeyCode() != KeyEvent.KEYCODE_DPAD_RIGHT) return false;
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            if (event.getRepeatCount() == 0) {
+                handler.removeCallbacks(holdRightTimer);
+                holdRightFired = false;
+                holdRightArmed = resumed && !reordering && openPopup == null;
+                if (holdRightArmed) handler.postDelayed(holdRightTimer, HOLD_RIGHT_MS);
+                return false;
+            }
+            return holdRightArmed || holdRightFired;
+        }
+        handler.removeCallbacks(holdRightTimer);
+        boolean fired = holdRightFired;
+        holdRightArmed = false;
+        holdRightFired = false;
+        return fired;
+    }
+
+    private void cancelHoldRight() {
+        handler.removeCallbacks(holdRightTimer);
+        holdRightArmed = false;
+    }
+
+    private void openVoiceSearch() {
+        cancelHoldRight();
+        if (openPopup != null) openPopup.dismiss();
+        try {
+            startActivity(new Intent(this, VoiceSearchActivity.class));
+        } catch (ActivityNotFoundException ignored) {
+        }
+    }
+
     private void cancelHoldOk() {
         handler.removeCallbacks(holdOkTimer);
         if (holdOkDown >= 0) holdOkFired = true;
