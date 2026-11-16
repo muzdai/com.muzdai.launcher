@@ -83,6 +83,23 @@
             android:orientation="vertical"
             android:visibility="gone" />
 
+        <!-- Found content: a row of cards per source, scrolling down when there are many. -->
+        <ScrollView
+            android:id="@+id/cardsScroll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:scrollbars="none"
+            android:clipToPadding="false"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/cardsBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+
         <!-- "Not installed": as wide as the name needs, the buttons on the right edge. -->
         <LinearLayout
             android:id="@+id/missing"

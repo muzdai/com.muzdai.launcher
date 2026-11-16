@@ -2604,6 +2604,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     if (isFinishing() || isDestroyed()) return;
                     if (p.kind == VoiceActions.Plan.Kind.START) {
                         open(p.intent);
+                    } else if (p.kind == VoiceActions.Plan.Kind.PLAY) {
+                        VoiceRun.play(MainActivity.this, p.card);
                     } else {
                         // A choice to make: where to search, or an app that is not installed.
                         startActivity(new Intent(MainActivity.this, VoiceSearchActivity.class)

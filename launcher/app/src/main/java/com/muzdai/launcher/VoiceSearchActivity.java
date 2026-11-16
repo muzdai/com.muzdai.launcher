@@ -19,6 +19,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -163,7 +165,7 @@ public final class VoiceSearchActivity extends Activity {
         }, "voice-ai").start();
     }
 
-    /** A CHOICES or MISSING plan as extras, for Home to hand over; START never needs the panel. */
+    /** A CARDS, CHOICES or MISSING plan as extras, for Home to hand over; START and PLAY never need the panel. */
     static Bundle pack(VoiceActions.Plan p) {
         Bundle b = new Bundle();
         b.putString("kind", p.kind.name());
@@ -171,18 +173,50 @@ public final class VoiceSearchActivity extends Activity {
         b.putString("maybeApp", p.maybeApp);
         b.putString("pkg", p.pkg);
         b.putString("name", p.name);
+        if (p.cards != null) {
+            ArrayList<Bundle> cards = new ArrayList<>();
+            for (ContentSearch.Card c : p.cards) {
+                Bundle cb = new Bundle();
+                cb.putString("pkg", c.pkg);
+                cb.putString("uri", c.uri);
+                cb.putString("title", c.title);
+                cb.putString("subtitle", c.subtitle);
+                cb.putString("image", c.image);
+                cb.putString("click", c.click);
+                cb.putBoolean("launchFirst", c.launchFirst);
+                cards.add(cb);
+            }
+            b.putParcelableArrayList("cards", cards);
+        }
         return b;
     }
 
+    @SuppressWarnings("deprecation")
     private static VoiceActions.Plan unpack(Bundle b) {
-        return VoiceActions.Plan.of(VoiceActions.Plan.Kind.valueOf(b.getString("kind")), null, b.getString("query"),
-                b.getString("maybeApp"), b.getString("pkg"), b.getString("name"));
+        VoiceActions.Plan p = VoiceActions.Plan.of(VoiceActions.Plan.Kind.valueOf(b.getString("kind")), null,
+                b.getString("query"), b.getString("maybeApp"), b.getString("pkg"), b.getString("name"));
+        ArrayList<Bundle> cards = b.getParcelableArrayList("cards");
+        if (cards != null) {
+            p.cards = new ArrayList<>();
+            for (Bundle cb : cards) {
+                p.cards.add(new ContentSearch.Card(cb.getString("pkg"), cb.getString("uri"), cb.getString("title"),
+                        cb.getString("subtitle"), cb.getString("image"), cb.getString("click"), cb.getBoolean("launchFirst")));
+            }
+        }
+        return p;
     }
 
     private void apply(VoiceActions.Plan p) {
         switch (p.kind) {
             case START:
                 if (start(p.intent)) finish();
+                return;
+            case PLAY:
+                VoiceRun.play(this, p.card);
+                finish();
+                return;
+            case CARDS:
+                showCards(p.cards);
                 return;
             case MISSING:
                 showMissing(p.pkg, p.name);
@@ -262,9 +296,105 @@ public final class VoiceSearchActivity extends Activity {
         }, "play-info").start();
     }
 
+    /** A row of cards per source, in the order found; a card opens and starts its content. */
+    private void showCards(List<ContentSearch.Card> cards) {
+        clearResults();
+        hint.setText(null);
+        LinearLayout box = findViewById(R.id.cardsBox);
+        float d = getResources().getDisplayMetrics().density;
+        View first = null;
+        int groups = 0;
+        String group = null;
+        LinearLayout row = null;
+        for (ContentSearch.Card c : cards) {
+            if (!c.pkg.equals(group)) {
+                group = c.pkg;
+                groups++;
+                TextView header = new TextView(this);
+                header.setText(actions.label(c.pkg).toUpperCase(Locale.getDefault()));
+                header.setTextColor(0xB3FFFFFF);
+                header.setTextSize(11f);
+                header.setLetterSpacing(0.06f);
+                header.setPadding(Math.round(4 * d), Math.round(groups > 1 ? 10 * d : 0), 0, Math.round(4 * d));
+                box.addView(header);
+                android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(this);
+                scroll.setHorizontalScrollBarEnabled(false);
+                scroll.setClipToPadding(false);
+                row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                scroll.addView(row);
+                box.addView(scroll);
+            }
+            View v = cardView(c, d);
+            row.addView(v);
+            if (first == null) first = v;
+        }
+        View scroll = findViewById(R.id.cardsScroll);
+        ViewGroup.LayoutParams lp = scroll.getLayoutParams();
+        // Two rows fit the 540dp screen with the words above them; more scroll.
+        lp.height = groups > 2 ? Math.round(360 * d) : ViewGroup.LayoutParams.WRAP_CONTENT;
+        scroll.setLayoutParams(lp);
+        scroll.setVisibility(View.VISIBLE);
+        if (first != null) first.requestFocus();
+    }
+
+    /** A card: 16:9 for YouTube, square for covers and posters, 112dp tall; its title and subtitle under it. */
+    private View cardView(ContentSearch.Card c, float d) {
+        int h = Math.round(112 * d);
+        int w = VoiceActions.YOUTUBE.equals(c.pkg) ? Math.round(200 * d) : h;
+        LinearLayout v = new LinearLayout(this);
+        v.setOrientation(LinearLayout.VERTICAL);
+        v.setFocusable(true);
+        v.setClickable(true);
+        v.setBackgroundResource(R.drawable.voice_card_bg);
+        int pad = Math.round(6 * d);
+        v.setPadding(pad, pad, pad, pad);
+        ImageView img = new ImageView(this);
+        img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        img.setBackgroundColor(0x22FFFFFF);
+        img.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override
+            public void getOutline(View view, android.graphics.Outline outline) {
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), 10 * d);
+            }
+        });
+        img.setClipToOutline(true);
+        v.addView(img, new LinearLayout.LayoutParams(w, h));
+        CardImages.load(img, c.image);
+        TextView title = new TextView(this);
+        title.setText(c.title);
+        title.setTextColor(0xFFFFFFFF);
+        title.setTextSize(12f);
+        title.setMaxLines(2);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(w, ViewGroup.LayoutParams.WRAP_CONTENT);
+        tp.topMargin = Math.round(4 * d);
+        v.addView(title, tp);
+        if (c.subtitle != null && !c.subtitle.isEmpty()) {
+            TextView sub = new TextView(this);
+            sub.setText(c.subtitle);
+            sub.setTextColor(0x99FFFFFF);
+            sub.setTextSize(10f);
+            sub.setSingleLine(true);
+            sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            v.addView(sub, new LinearLayout.LayoutParams(w, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMarginEnd(Math.round(8 * d));
+        v.setLayoutParams(lp);
+        v.setOnClickListener(x -> {
+            VoiceRun.play(this, c);
+            finish();
+        });
+        return v;
+    }
+
     private void clearResults() {
         rows.removeAllViews();
         rows.setVisibility(View.GONE);
+        ((LinearLayout) findViewById(R.id.cardsBox)).removeAllViews();
+        findViewById(R.id.cardsScroll).setVisibility(View.GONE);
         missing.setVisibility(View.GONE);
         asDialog(false);
     }

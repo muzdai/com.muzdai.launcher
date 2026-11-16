@@ -41,11 +41,15 @@ final class VoiceActions {
 
     /** The outcome of a request. */
     static final class Plan {
-        enum Kind { START, CHOICES, MISSING }
+        enum Kind { START, PLAY, CARDS, CHOICES, MISSING }
 
         final Kind kind;
         /** START: what to start. */
         final Intent intent;
+        /** PLAY: the content to open and start (VoiceRun). */
+        ContentSearch.Card card;
+        /** CARDS: what was found, grouped by source in order; query holds the words. */
+        List<ContentSearch.Card> cards;
         /** CHOICES: what to look for, and a short phrase that may be an app the TV lacks (or null). */
         final String query, maybeApp;
         /** MISSING: the package (null when it has no Play Store listing) and the name to show. */
@@ -129,11 +133,108 @@ final class VoiceActions {
                     return new Plan(Plan.Kind.MISSING, null, null, null, pkg, name);
                 }
                 return null;
-            default:   // play, search
-                if (installed(a.app)) return start(searchIntent(a.app, q));
-                if (!a.app.isEmpty() && AppNames.name(a.app) != null) return missing(a.app, AppNames.name(a.app));
+            default: {   // play, search
+                if (!a.app.isEmpty() && !installed(a.app) && AppNames.name(a.app) != null) {
+                    return missing(a.app, AppNames.name(a.app));
+                }
+                String app = installed(a.app) ? a.app : "";
+                if ("play".equals(a.action)) {
+                    ContentSearch.Card c = first(app, a.kind, q);
+                    if (c != null) return play(c);
+                } else {
+                    List<ContentSearch.Card> found = cards(app, a.kind, q);
+                    if (!found.isEmpty()) {
+                        Plan p = new Plan(Plan.Kind.CARDS, null, q, null, null, null);
+                        p.cards = found;
+                        return p;
+                    }
+                }
+                if (!app.isEmpty()) return start(searchIntent(app, q));
                 return new Plan(Plan.Kind.CHOICES, null, q, null, null, null);
+            }
         }
+    }
+
+    private static Plan play(ContentSearch.Card c) {
+        Plan p = new Plan(Plan.Kind.PLAY, null, null, null, null, null);
+        p.card = c;
+        return p;
+    }
+
+    /**
+     * The one thing "play X" means: in the named app, or, with none named, films and series from the owner's Emby
+     * first and ALPAC after it, music in the default music app, the rest on YouTube. Null when nothing is found or the
+     * app cannot be searched (Qobuz): the app's own search then opens.
+     */
+    private ContentSearch.Card first(String app, String kind, String q) {
+        if (app.isEmpty()) {
+            if ("movie".equals(kind) || "series".equals(kind)) {
+                ContentSearch.Card c = one(EMBY, q);
+                return c != null ? c : one(ALPAC, q);
+            }
+            app = "music".equals(kind) ? musicApp() : YOUTUBE;
+        }
+        return one(app, q);
+    }
+
+    /** Cards for "find X": the named app's, or by kind from the sources that fit, each source's best few. */
+    private List<ContentSearch.Card> cards(String app, String kind, String q) {
+        String[] sources;
+        if (!app.isEmpty()) sources = new String[]{app};
+        else if ("music".equals(kind)) sources = new String[]{musicApp(), SPOTIFY, DEEZER, YOUTUBE};
+        else if ("movie".equals(kind) || "series".equals(kind)) sources = new String[]{EMBY, ALPAC, YOUTUBE};
+        else if ("video".equals(kind)) sources = new String[]{YOUTUBE};
+        else sources = new String[]{YOUTUBE, EMBY, ALPAC};
+        List<ContentSearch.Card> out = new ArrayList<>();
+        List<String> done = new ArrayList<>();
+        for (String s : sources) {
+            String src = YOUTUBE_MUSIC.equals(s) ? YOUTUBE : s;
+            if (done.contains(src)) continue;
+            done.add(src);
+            out.addAll(search(src, q, 8));
+        }
+        return out;
+    }
+
+    private ContentSearch.Card one(String app, String q) {
+        List<ContentSearch.Card> r = search(app, q, 1);
+        return r.isEmpty() ? null : r.get(0);
+    }
+
+    /** One source's results; none when it is not installed, has no keys, or fails. */
+    List<ContentSearch.Card> search(String app, String q, int max) {
+        try {
+            VoiceKeys keys = VoiceKeys.load(ctx);
+            switch (app) {
+                case YOUTUBE:
+                case YOUTUBE_MUSIC:
+                    if (installed(YOUTUBE)) return ContentSearch.youtube(q, max);
+                    break;
+                case SPOTIFY:
+                    if (installed(SPOTIFY) && keys.has(VoiceKeys.SPOTIFY_ID, VoiceKeys.SPOTIFY_SECRET)) {
+                        return ContentSearch.spotify(keys.get(VoiceKeys.SPOTIFY_ID), keys.get(VoiceKeys.SPOTIFY_SECRET), q, max);
+                    }
+                    break;
+                case DEEZER:
+                    if (installed(DEEZER)) return ContentSearch.deezer(q, max);
+                    break;
+                case EMBY:
+                    if (installed(EMBY) && keys.has(VoiceKeys.EMBY_URL, VoiceKeys.EMBY_KEY)) {
+                        return ContentSearch.emby(keys.get(VoiceKeys.EMBY_URL), keys.get(VoiceKeys.EMBY_KEY), q, max);
+                    }
+                    break;
+                case ALPAC:
+                    if (installed(ALPAC) && keys.has(VoiceKeys.TMDB_KEY)) {
+                        return ContentSearch.tmdb(keys.get(VoiceKeys.TMDB_KEY), q, max);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        } catch (IOException | RuntimeException ignored) {
+            // this source is out; the others still count
+        }
+        return new ArrayList<>();
     }
 
     Plan plan(String text) {

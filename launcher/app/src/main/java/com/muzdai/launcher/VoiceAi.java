@@ -49,13 +49,16 @@ final class VoiceAi {
         final String query;
         /** For open of an app that is not installed: its name and the package it most likely has on Google Play. */
         final String name, guess;
+        /** music, video, movie, series or other: where to look when no app is named. */
+        final String kind;
 
-        Answer(String action, String app, String query, String name, String guess) {
+        Answer(String action, String app, String query, String name, String guess, String kind) {
             this.action = action;
             this.app = app;
             this.query = query;
             this.name = name;
             this.guess = guess;
+            this.kind = kind;
         }
     }
 
@@ -125,7 +128,7 @@ final class VoiceAi {
                 + "Ответь только JSON без пояснений:\n"
                 + "{\"action\":\"open|play|search|tv\",\"app\":\"пакет из списка или пусто\","
                 + "\"query\":\"что найти или включить, исправленное\",\"name\":\"название приложения\","
-                + "\"guess\":\"пакет Google Play\"}\n"
+                + "\"guess\":\"пакет Google Play\",\"kind\":\"music|video|movie|series|other\"}\n"
                 + "Правила:\n"
                 + "- open: открыть приложение. Если оно установлено, app = его пакет. Если нет, app пусто, name = его "
                 + "название, guess = наиболее вероятный пакет его версии для Android TV в Google Play (или пусто).\n"
@@ -135,6 +138,9 @@ final class VoiceAi {
                 + "- search: найти, не включая. app и query — как для play.\n"
                 + "- tv: телепрограмма, каналы эфира, «что идёт», матчи и трансляции по телевизору; app пусто, query = "
                 + "запрос как сказан, исправленный.\n"
+                + "- kind: music — песня, исполнитель, альбом; video — ролик, клип, блогер, обзор; movie — фильм; series — "
+                + "сериал или его серия; other — остальное.\n"
+                + "- Для фильма или сериала query — только его название (без слов «фильм», «сериал», «серия»).\n"
                 + "Команда: " + spoken;
     }
 
@@ -149,8 +155,9 @@ final class VoiceAi {
             if (!action.equals("open") && !action.equals("play") && !action.equals("search") && !action.equals("tv")) {
                 return null;
             }
+            String kind = o.optString("kind", "other").trim().toLowerCase(java.util.Locale.ROOT);
             return new Answer(action, o.optString("app", "").trim(), o.optString("query", "").trim(),
-                    o.optString("name", "").trim(), o.optString("guess", "").trim());
+                    o.optString("name", "").trim(), o.optString("guess", "").trim(), kind);
         } catch (JSONException e) {
             return null;
         }

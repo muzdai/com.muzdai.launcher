@@ -19,6 +19,8 @@ public class VoiceAiTest {
         assertEquals("play", a.action);
         assertEquals("com.google.android.youtube.tv", a.app);
         assertEquals("Joe Cocker With A Little Help From My Friends", a.query);
+        assertEquals("other", a.kind);   // not given: other
+        assertEquals("movie", VoiceAi.parse("{\"action\":\"play\",\"kind\":\"Movie\"}").kind);
     }
 
     @Test public void parseKeepsTheNameAndGuessOfAnAppTheTvLacks() {

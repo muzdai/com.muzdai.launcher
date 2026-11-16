@@ -3,8 +3,12 @@ package com.muzdai.launcher;
 import android.accessibilityservice.AccessibilityService;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.Collections;
 import java.util.Map;
 
@@ -25,9 +29,16 @@ public class InputKeyService extends AccessibilityService {
     private Map<Integer, String> holdAppKeys = Collections.emptyMap();
     private Map<Integer, String> holdAppScancodes = Collections.emptyMap();
 
+    /** The running helper, for voice search's presses in other apps (VoiceRun); null while it is off. Main thread. */
+    private static InputKeyService running;
+    private final Handler main = new Handler(Looper.getMainLooper());
+    /** SETTLE_MS: a page's focus is final; LAUNCH_MS: an app just launched takes links (Deezer errs before that). */
+    private static final long POLL_MS = 400, SETTLE_MS = 1500, LAUNCH_MS = 4000;
+
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
+        running = this;
         Config config = Config.load(this);
         inputKeycodes = config.inputKeycodes;
         appKeys = RemoteKeys.parseAppKeys(config.appKeys);
@@ -67,14 +78,98 @@ public class InputKeyService extends AccessibilityService {
 
     @Override
     public boolean onUnbind(Intent intent) {
+        if (running == this) running = null;
         RemoteKeys.release(this);
         return super.onUnbind(intent);
     }
 
     @Override
     public void onDestroy() {
+        if (running == this) running = null;
+        main.removeCallbacksAndMessages(null);
         RemoteKeys.release(this);
         super.onDestroy();
+    }
+
+    // ---- voice search: pressing in other apps ---------------------------------------------------------
+    // The screen is read only while voice search waits for a page (canRetrieveWindowContent, no event types): a short
+    // poll of the window in front, then nothing.
+
+    /** Runs {@code then} once {@code pkg}'s window is in front and the app has started; false without the helper. */
+    static boolean whenShown(String pkg, long timeoutMs, Runnable then) {
+        InputKeyService s = running;
+        if (s == null) return false;
+        long until = SystemClock.uptimeMillis() + timeoutMs;
+        s.main.post(new Runnable() {
+            @Override
+            public void run() {
+                if (pkg.equals(s.front())) {
+                    s.main.postDelayed(then, LAUNCH_MS);
+                } else if (SystemClock.uptimeMillis() < until) {
+                    s.main.postDelayed(this, POLL_MS);
+                }
+            }
+        });
+        return true;
+    }
+
+    /**
+     * Once {@code pkg}'s page is in front, presses its focused button ({@code text} empty: Play, Watch, Continue) or the
+     * row whose text or description is {@code text} or starts with "{@code text},". Gives up after the timeout.
+     */
+    static void press(String pkg, String text, long timeoutMs) {
+        InputKeyService s = running;
+        if (s == null) return;
+        long until = SystemClock.uptimeMillis() + timeoutMs;
+        s.main.postDelayed(new Runnable() {
+            long since = -1;
+
+            @Override
+            public void run() {
+                AccessibilityNodeInfo root = s.getRootInActiveWindow();
+                long now = SystemClock.uptimeMillis();
+                if (root != null && pkg.contentEquals(root.getPackageName())) {
+                    if (since < 0) since = now;
+                    // The focused button only once the page has settled: before that focus may still be on a menu.
+                    AccessibilityNodeInfo target = text.isEmpty()
+                            ? (now - since >= SETTLE_MS ? root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) : null)
+                            : find(root, text);
+                    if (target != null && click(target)) return;
+                } else {
+                    since = -1;
+                }
+                if (now < until) s.main.postDelayed(this, POLL_MS);
+            }
+        }, POLL_MS);
+    }
+
+    private String front() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        return root == null || root.getPackageName() == null ? null : root.getPackageName().toString();
+    }
+
+    private static AccessibilityNodeInfo find(AccessibilityNodeInfo node, String text) {
+        if (node == null) return null;
+        if (matches(node.getContentDescription(), text) || matches(node.getText(), text)) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo hit = find(node.getChild(i), text);
+            if (hit != null) return hit;
+        }
+        return null;
+    }
+
+    static boolean matches(CharSequence s, String text) {
+        if (s == null) return false;
+        String v = s.toString().trim();
+        return v.equalsIgnoreCase(text) || v.regionMatches(true, 0, text + ",", 0, text.length() + 1);
+    }
+
+    /** Clicks the node, or the nearest ancestor that takes a click. */
+    private static boolean click(AccessibilityNodeInfo node) {
+        for (AccessibilityNodeInfo n = node; n != null; n = n.getParent()) {
+            if (n.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true;
+        }
+        return false;
     }
 
     @Override
