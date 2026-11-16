@@ -36,6 +36,8 @@ final class VoiceActions {
     static final String[] SEARCH_APPS = {YOUTUBE, ALPAC, EMBY, SPOTIFY, DEEZER, TV_APP};
     /** The music apps offered as the default one in settings, when installed. */
     static final String[] MUSIC_APPS = {YOUTUBE, YOUTUBE_MUSIC, SPOTIFY, DEEZER, QOBUZ};
+    /** Players: TCL Channel over one of these listens in the background and searches in it (VoiceOverPlayer). */
+    static final String[] PLAYER_APPS = {YOUTUBE, YOUTUBE_MUSIC, SPOTIFY, DEEZER, QOBUZ, EMBY, ALPAC};
     /** Settings (VoiceAi.PREFS): where music goes when no app is named. */
     static final String KEY_MUSIC = "music_app";
 
@@ -73,6 +75,19 @@ final class VoiceActions {
     /** Launchable apps on the TV: label to package. */
     private final Map<String, String> labels = new HashMap<>();
 
+    /** The player on screen when the request was spoken: where it goes when no app is named. Null on Home. */
+    private String activeApp;
+
+    VoiceActions inApp(String pkg) {
+        activeApp = installed(pkg) ? pkg : null;
+        return this;
+    }
+
+    static boolean isPlayer(String pkg) {
+        for (String p : PLAYER_APPS) if (p.equals(pkg)) return true;
+        return false;
+    }
+
     VoiceActions(Context ctx) {
         this.ctx = ctx;
         PackageManager pm = ctx.getPackageManager();
@@ -99,7 +114,7 @@ final class VoiceActions {
                     model = VoiceAi.check(key);
                     p.edit().putString(VoiceAi.KEY_MODEL, model).apply();
                 }
-                VoiceAi.Answer answer = VoiceAi.understand(key, model, text, labels, musicApp());
+                VoiceAi.Answer answer = VoiceAi.understand(key, model, text, labels, musicApp(), activeApp);
                 if (answer != null) {
                     android.util.Log.i("VoiceActions", "ai: " + answer.action + " app=" + answer.app + " kind="
                             + answer.kind + " query=" + answer.query);
@@ -111,7 +126,13 @@ final class VoiceActions {
                 if (String.valueOf(e.getMessage()).contains("404")) p.edit().remove(VoiceAi.KEY_MODEL).apply();
             }
         }
-        return plan(text);
+        Plan rules = plan(text);
+        if (activeApp != null && rules.kind == Plan.Kind.CHOICES && rules.maybeApp == null) {
+            // No app named over a player: that player's search.
+            ContentSearch.Card c = first(activeApp, "", rules.query);
+            return c != null ? play(c) : start(searchIntent(activeApp, rules.query));
+        }
+        return rules;
     }
 
     /** The music app chosen in settings, if still installed; else the first installed of MUSIC_APPS. */
@@ -142,7 +163,7 @@ final class VoiceActions {
                 if (!a.app.isEmpty() && !installed(a.app) && AppNames.name(a.app) != null) {
                     return missing(a.app, AppNames.name(a.app));
                 }
-                String app = installed(a.app) ? a.app : "";
+                String app = installed(a.app) ? a.app : activeApp != null ? activeApp : "";
                 if ("play".equals(a.action)) {
                     ContentSearch.Card c = first(app, a.kind, q);
                     if (c != null) return play(c);

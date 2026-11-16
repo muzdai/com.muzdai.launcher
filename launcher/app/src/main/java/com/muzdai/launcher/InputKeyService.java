@@ -125,6 +125,14 @@ public class InputKeyService extends AccessibilityService {
      * Once {@code pkg}'s page is in front, presses its focused button ({@code text} empty: Play, Watch, Continue) or the
      * row whose text or description is {@code text} or starts with "{@code text},". Gives up after the timeout.
      */
+    /** The package of the window in front, or null without the helper. */
+    static String frontPackage() {
+        InputKeyService s = running;
+        if (s == null) return null;
+        AccessibilityNodeInfo root = s.getRootInActiveWindow();
+        return root == null || root.getPackageName() == null ? null : root.getPackageName().toString();
+    }
+
     /** press(): a click target given by view id (a Compose testTag) instead of text, as "id:player-card". */
     static final String BY_ID = "id:";
     /**

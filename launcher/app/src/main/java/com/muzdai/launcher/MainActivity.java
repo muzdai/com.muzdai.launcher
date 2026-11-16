@@ -2586,6 +2586,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             inFront.openVoiceSearch();
             return;
         }
+        // Over a player the player stays: listening in the background, the result looked up in it.
+        String front = InputKeyService.frontPackage();
+        if (VoiceActions.isPlayer(front) && VoiceOverPlayer.listen(ctx, front)) return;
         try {
             ctx.startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
                     .setClass(ctx, MainActivity.class).putExtra(EXTRA_LISTEN, true)

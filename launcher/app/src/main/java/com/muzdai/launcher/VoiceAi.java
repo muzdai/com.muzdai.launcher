@@ -107,15 +107,20 @@ final class VoiceAi {
      * The model's reading of a request. {@code apps}: installed apps, label to package; {@code music}: the package music
      * goes to when no app is named. Throws on no network, a bad key or an answer that is not the expected JSON.
      */
-    static Answer understand(String key, String model, String spoken, Map<String, String> apps, String music)
-            throws IOException {
-        String text = generate(key, model, prompt(spoken, apps, music), TIMEOUT_MS);
+    static Answer understand(String key, String model, String spoken, Map<String, String> apps, String music,
+            String onScreen) throws IOException {
+        String text = generate(key, model, prompt(spoken, apps, music, onScreen), TIMEOUT_MS);
         Answer a = parse(text);
         if (a == null) throw new IOException("unexpected answer");
         return a;
     }
 
     static String prompt(String spoken, Map<String, String> apps, String music) {
+        return prompt(spoken, apps, music, null);
+    }
+
+    /** onScreen: the player open on the TV, where play and search go when the command names no app. */
+    static String prompt(String spoken, Map<String, String> apps, String music, String onScreen) {
         StringBuilder list = new StringBuilder();
         for (Map.Entry<String, String> e : apps.entrySet()) {
             list.append("- ").append(e.getKey()).append(" (").append(e.getValue()).append(")\n");
@@ -125,6 +130,8 @@ final class VoiceAi {
                 + "сериалов, телеканалов; русские написания иностранных имён переведи в оригинальные).\n"
                 + "Установленные приложения (название и пакет):\n" + list
                 + "Музыка по умолчанию: " + music + "\n"
+                + (onScreen == null ? "" : "Сейчас на экране открыто приложение " + onScreen + ": если в команде play "
+                        + "или search приложение не названо, app = " + onScreen + " (и для фильмов, и для музыки).\n")
                 + "Ответь только JSON без пояснений:\n"
                 + "{\"action\":\"open|play|search|tv\",\"app\":\"пакет из списка или пусто\","
                 + "\"query\":\"что найти или включить, исправленное\",\"name\":\"название приложения\","
