@@ -178,7 +178,7 @@ public class InputKeyService extends AccessibilityService {
         if (s == null) return;
         long until = SystemClock.uptimeMillis() + timeoutMs;
         s.main.post(new Runnable() {
-            static final int FIND_SEARCH = 0, TYPE = 1, PICK = 2, PLAY_ALBUM = 3, FULL_SCREEN = 4;
+            static final int FIND_SEARCH = 0, TYPE = 1, PICK = 2, RELEASES = 5, PLAY_ALBUM = 3, FULL_SCREEN = 4;
             int step = FIND_SEARCH, backs;
             long stepAt = SystemClock.uptimeMillis();
 
@@ -199,8 +199,8 @@ public class InputKeyService extends AccessibilityService {
                                 next(TYPE);
                             } else if (tab != null) {
                                 click(tab);
-                            } else if (inStep >= SETTLE_MS && backs < 3) {
-                                // The full screen player (or another page without the tab bar) is up: back out.
+                            } else if (inStep >= SETTLE_MS && backs < 6) {
+                                // The full screen player, or an album page under it, has no tab bar: back out.
                                 s.performGlobalAction(GLOBAL_ACTION_BACK);
                                 backs++;
                                 stepAt = now;
@@ -217,8 +217,21 @@ public class InputKeyService extends AccessibilityService {
                         case PICK: {
                             // Not sooner: results of an earlier search may still be on screen.
                             if (inStep < SETTLE_MS) break;
-                            AccessibilityNodeInfo hit = album ? bestAlbum(root, query) : firstLabelled(root, TRACK);
-                            if (hit != null && click(hit)) next(album ? PLAY_ALBUM : FULL_SCREEN);
+                            if (album) {
+                                // Top results may leave the album out; the Releases tab lists the albums.
+                                AccessibilityNodeInfo tab = find(root, "Releases");
+                                if (tab == null) tab = find(root, "Релизы");
+                                if (tab != null && click(tab)) next(RELEASES);
+                                break;
+                            }
+                            AccessibilityNodeInfo hit = firstLabelled(root, TRACK);
+                            if (hit != null && click(hit)) next(FULL_SCREEN);
+                            break;
+                        }
+                        case RELEASES: {
+                            if (inStep < SETTLE_MS) break;
+                            AccessibilityNodeInfo hit = bestRelease(root, query);
+                            if (hit != null && click(hit)) next(PLAY_ALBUM);
                             break;
                         }
                         case PLAY_ALBUM: {
@@ -278,30 +291,42 @@ public class InputKeyService extends AccessibilityService {
     }
 
     /**
-     * The album card whose title (the text just before its "Album • Artist" label) is in the query, as Qobuz's top
-     * results put other albums of the artist first; the first album when none is.
+     * On the Releases tab, the album whose title (and best also its artist) is in the query: the cards are clickable
+     * with the title and the artist as their first two texts. The first card when none matches; the "player-card"
+     * at the top is not a result.
      */
-    private static AccessibilityNodeInfo bestAlbum(AccessibilityNodeInfo root, String query) {
-        List<AccessibilityNodeInfo> labels = new ArrayList<>();
-        collectLabelled(root, ALBUM, labels);
-        for (AccessibilityNodeInfo label : labels) {
-            AccessibilityNodeInfo parent = label.getParent();
-            if (parent == null) continue;
-            for (int i = 0; i < parent.getChildCount(); i++) {
-                AccessibilityNodeInfo c = parent.getChild(i);
-                if (c != null && c.getText() != null && !isLabel(c.getText(), ALBUM)
-                        && titleInQuery(c.getText().toString(), query)) {
-                    return label;
-                }
-            }
+    private static AccessibilityNodeInfo bestRelease(AccessibilityNodeInfo root, String query) {
+        List<AccessibilityNodeInfo> cards = new ArrayList<>();
+        collectCards(root, cards);
+        AccessibilityNodeInfo titleOnly = null;
+        for (AccessibilityNodeInfo card : cards) {
+            List<String> t = childTexts(card);
+            if (!titleInQuery(t.get(0), query)) continue;
+            if (titleInQuery(t.get(1), query)) return card;
+            if (titleOnly == null) titleOnly = card;
         }
-        return labels.isEmpty() ? null : labels.get(0);
+        return titleOnly != null ? titleOnly : cards.isEmpty() ? null : cards.get(0);
     }
 
-    private static void collectLabelled(AccessibilityNodeInfo node, String[] kind, List<AccessibilityNodeInfo> out) {
+    private static void collectCards(AccessibilityNodeInfo node, List<AccessibilityNodeInfo> out) {
         if (node == null) return;
-        if (isLabel(node.getText(), kind)) out.add(node);
-        for (int i = 0; i < node.getChildCount(); i++) collectLabelled(node.getChild(i), kind, out);
+        String id = node.getViewIdResourceName();
+        if (id != null && id.endsWith("player-card")) return;
+        if (node.isClickable() && childTexts(node).size() >= 2) {
+            out.add(node);
+            return;
+        }
+        for (int i = 0; i < node.getChildCount(); i++) collectCards(node.getChild(i), out);
+    }
+
+    /** The texts of node's direct children, in order. */
+    private static List<String> childTexts(AccessibilityNodeInfo node) {
+        List<String> out = new ArrayList<>();
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo c = node.getChild(i);
+            if (c != null && c.getText() != null && c.getText().length() > 0) out.add(c.getText().toString());
+        }
+        return out;
     }
 
     /** "The Wall" in "Pink Floyd The Wall", ignoring case, punctuation and a "(Remastered)" tail. */
