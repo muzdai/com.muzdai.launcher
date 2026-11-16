@@ -380,7 +380,14 @@ final class MiniPlayer {
         PendingIntent pi = c.getSessionActivity();
         if (pi != null) {
             try {
-                pi.send();
+                // Android 14 starts the app's activity from a PendingIntent only when the sender (Home, in front)
+                // lends it its right to start activities.
+                android.os.Bundle options = null;
+                if (android.os.Build.VERSION.SDK_INT >= 34) {
+                    options = android.app.ActivityOptions.makeBasic().setPendingIntentBackgroundActivityStartMode(
+                            android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED).toBundle();
+                }
+                pi.send(act, 0, null, null, null, null, options);
                 opened = true;
             } catch (PendingIntent.CanceledException ignored) {
             }
