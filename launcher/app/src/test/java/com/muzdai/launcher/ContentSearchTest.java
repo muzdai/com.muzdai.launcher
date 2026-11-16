@@ -74,6 +74,18 @@ public class ContentSearchTest {
         assertEquals("236235", ContentSearch.tmdbId(cards.get(1)));
     }
 
+    @Test public void qobuzCardTypesTheWordsIntoTheAppsSearch() {
+        ContentSearch.Card c = ContentSearch.qobuz("Joe Cocker With A Little Help");
+        assertEquals("com.qobuz.music", c.pkg);
+        assertEquals("", c.uri);
+        assertEquals("Joe Cocker With A Little Help", c.click);
+        assertTrue(c.launchFirst);
+        assertTrue(InputKeyService.isTrackLabel("Track • Joe Cocker • With A Little Help From My Friends"));
+        assertTrue(InputKeyService.isTrackLabel("Трек • Джо Кокер"));
+        assertFalse(InputKeyService.isTrackLabel("Album • Joe Cocker"));
+        assertFalse(InputKeyService.isTrackLabel(null));
+    }
+
     @Test public void keysFileIgnoresCommentsAndBlanks() {
         Map<String, String> k = VoiceKeys.parse("# keys\nEMBY_URL = http://e:8096\n\ntmdb_key=abc\nbroken\nspotify_id=\n");
         assertEquals("http://e:8096", k.get("emby_url"));

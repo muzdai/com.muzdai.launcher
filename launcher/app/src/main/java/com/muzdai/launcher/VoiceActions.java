@@ -163,8 +163,8 @@ final class VoiceActions {
 
     /**
      * The one thing "play X" means: in the named app, or, with none named, films and series from the owner's Emby
-     * first and ALPAC after it, music in the default music app, the rest on YouTube. Null when nothing is found or the
-     * app cannot be searched (Qobuz): the app's own search then opens.
+     * first and ALPAC after it, music in the default music app, the rest on YouTube. Null when nothing is found: the
+     * app's own search then opens. Qobuz is searched inside the app itself (ContentSearch.qobuz).
      */
     private ContentSearch.Card first(String app, String kind, String q) {
         if (app.isEmpty()) {
@@ -212,6 +212,7 @@ final class VoiceActions {
     }
 
     private ContentSearch.Card one(String app, String q) {
+        if (QOBUZ.equals(app)) return installed(QOBUZ) ? ContentSearch.qobuz(q) : null;
         List<ContentSearch.Card> r = search(app, q, 1);
         return r.isEmpty() ? null : r.get(0);
     }

@@ -151,6 +151,14 @@ final class ContentSearch {
 
     // ---- Deezer ----------------------------------------------------------------------------------
 
+    /**
+     * Qobuz has no links or open search API: the card carries the words, and VoiceRun has InputKeyService type them
+     * into the app's search and press the first track. An empty uri marks that.
+     */
+    static Card qobuz(String q) {
+        return new Card(VoiceActions.QOBUZ, "", q, null, null, q, true);
+    }
+
     static List<Card> deezer(String q, int max) throws IOException {
         return parseDeezer(get("https://api.deezer.com/search?limit=" + max + "&q=" + enc(q), null));
     }

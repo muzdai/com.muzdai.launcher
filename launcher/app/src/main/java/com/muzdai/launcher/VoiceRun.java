@@ -11,7 +11,8 @@ import android.widget.Toast;
 /**
  * Opens a found card and gets it playing, the way each app was found to need on the TV: a YouTube watch link or a
  * spotify:track link plays by itself; Deezer must be running before its album link works, and then the track's row is
- * pressed; Emby and ALPAC open the title's page with focus on Play / Watch, which is pressed. The pressing is done by
+ * pressed; Emby and ALPAC open the title's page with focus on Play / Watch, which is pressed; Qobuz, which has no
+ * links, gets the words typed into its own search and its first track pressed. The pressing is done by
  * InputKeyService (an accessibility service); without it the page is left open for OK.
  */
 final class VoiceRun {
@@ -28,7 +29,8 @@ final class VoiceRun {
             if (launch == null) launch = app.getPackageManager().getLaunchIntentForPackage(card.pkg);
             if (launch != null && start(app, launch)) {
                 // The link only once the app's own window is up; without the helper, after a fixed wait.
-                if (!InputKeyService.whenShown(card.pkg, WAIT_MS, () -> openAndPress(app, card, link))) {
+                if (!InputKeyService.whenShown(card.pkg, WAIT_MS, () -> openAndPress(app, card, link))
+                        && !card.uri.isEmpty()) {
                     new Handler(Looper.getMainLooper()).postDelayed(() -> start(app, link), 8000);
                 }
                 return;
@@ -38,6 +40,10 @@ final class VoiceRun {
     }
 
     private static void openAndPress(Context app, ContentSearch.Card card, Intent link) {
+        if (card.uri.isEmpty()) {   // no link (Qobuz): the words go into the app's own search
+            InputKeyService.searchAndPlayTrack(card.pkg, card.click, WAIT_MS);
+            return;
+        }
         if (!start(app, link) || card.click == null) return;
         InputKeyService.press(card.pkg, card.click, WAIT_MS);
     }

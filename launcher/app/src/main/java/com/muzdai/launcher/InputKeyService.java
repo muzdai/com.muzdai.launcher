@@ -149,6 +149,89 @@ public class InputKeyService extends AccessibilityService {
         }, POLL_MS);
     }
 
+    /**
+     * Qobuz has no links: in its window, opens Search (the "navbar-search" tab), writes {@code query} into the search
+     * field and, once results show, presses the first track ("Track • Artist • Album"), which starts it, as OK does.
+     * Gives up after the timeout.
+     */
+    static void searchAndPlayTrack(String pkg, String query, long timeoutMs) {
+        InputKeyService s = running;
+        if (s == null) return;
+        long until = SystemClock.uptimeMillis() + timeoutMs;
+        s.main.post(new Runnable() {
+            int step;
+            long typedAt;
+
+            @Override
+            public void run() {
+                AccessibilityNodeInfo root = s.getRootInActiveWindow();
+                if (root != null && pkg.contentEquals(root.getPackageName())) {
+                    if (step == 0) {
+                        AccessibilityNodeInfo field = editText(root);
+                        if (field != null) {
+                            step = 1;
+                        } else {
+                            AccessibilityNodeInfo tab = byViewId(root, "navbar-search");
+                            if (tab != null) click(tab);
+                        }
+                    }
+                    if (step == 1) {
+                        AccessibilityNodeInfo field = editText(root);
+                        android.os.Bundle args = new android.os.Bundle();
+                        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, query);
+                        if (field != null && field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
+                            step = 2;
+                            typedAt = SystemClock.uptimeMillis();
+                        }
+                    } else if (step == 2 && SystemClock.uptimeMillis() - typedAt >= SETTLE_MS) {
+                        // Not sooner: results of an earlier search may still be on screen.
+                        AccessibilityNodeInfo track = firstTrack(root);
+                        if (track != null && click(track)) return;
+                    }
+                }
+                if (SystemClock.uptimeMillis() < until) s.main.postDelayed(this, POLL_MS);
+            }
+        });
+    }
+
+    private static AccessibilityNodeInfo editText(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+        if (node.getClassName() != null && "android.widget.EditText".contentEquals(node.getClassName())) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo hit = editText(node.getChild(i));
+            if (hit != null) return hit;
+        }
+        return null;
+    }
+
+    private static AccessibilityNodeInfo byViewId(AccessibilityNodeInfo node, String id) {
+        if (node == null) return null;
+        String v = node.getViewIdResourceName();
+        if (v != null && (v.equals(id) || v.endsWith("/" + id))) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo hit = byViewId(node.getChild(i), id);
+            if (hit != null) return hit;
+        }
+        return null;
+    }
+
+    /** The first search result labelled as a track, in screen order. */
+    private static AccessibilityNodeInfo firstTrack(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+        if (isTrackLabel(node.getText())) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo hit = firstTrack(node.getChild(i));
+            if (hit != null) return hit;
+        }
+        return null;
+    }
+
+    static boolean isTrackLabel(CharSequence s) {
+        if (s == null) return false;
+        String v = s.toString().trim().toLowerCase(java.util.Locale.ROOT);
+        return v.startsWith("track •") || v.startsWith("трек •");
+    }
+
     /** How many nodes under node show some text or description, counting up to max. */
     private static int texts(AccessibilityNodeInfo node, int max) {
         if (node == null) return 0;
