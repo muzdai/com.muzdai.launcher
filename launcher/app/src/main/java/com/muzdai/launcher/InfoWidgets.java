@@ -361,14 +361,36 @@ final class InfoWidgets {
                     blocked = NewsFilter.blocked(x.getAttributeValue(null, "url"));
                 }
             }
-            if (n == 0) return false;
+            if (n == 0) return fetchOwnFeeds(ctx, topic);
             prefs(ctx).edit().putString(KEY_NEWS, out.toString()).putLong(KEY_NEWS_AT, System.currentTimeMillis())
                     .putString(KEY_NEWS_FOR, topic + NEWS_SOURCE).apply();
             return true;
         } catch (Exception e) {
             Log.w(TAG, "news: " + e.getMessage());
-            return false;
+            return fetchOwnFeeds(ctx, newsTopic(ctx));
         }
+    }
+
+    /** Google refused or gave nothing: the outlets' own feeds (NewsFeeds), whatever the section. */
+    private static boolean fetchOwnFeeds(Context ctx, String topic) {
+        List<NewsFeeds.Item> all = new java.util.ArrayList<>();
+        for (String[] f : NewsFeeds.FEEDS) {
+            try {
+                all.addAll(NewsFeeds.parse(getFeed(f[0]), f[1]));
+            } catch (Exception e) {
+                Log.w(TAG, "news feed " + f[1] + ": " + e.getMessage());
+            }
+        }
+        List<NewsFeeds.Item> top = NewsFeeds.merge(all, 10, 2);
+        if (top.isEmpty()) return false;
+        StringBuilder out = new StringBuilder();
+        for (NewsFeeds.Item i : top) {
+            if (out.length() > 0) out.append('\n');
+            out.append(i.title).append("  \u00B7  ").append(i.source);
+        }
+        prefs(ctx).edit().putString(KEY_NEWS, out.toString()).putLong(KEY_NEWS_AT, System.currentTimeMillis())
+                .putString(KEY_NEWS_FOR, topic + NEWS_SOURCE).apply();
+        return true;
     }
 
     private static boolean fetchRates(Context ctx) {
