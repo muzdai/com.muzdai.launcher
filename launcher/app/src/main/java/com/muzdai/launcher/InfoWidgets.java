@@ -353,7 +353,8 @@ final class InfoWidgets {
                     out.append(title);
                     n++;
                 } else if (inItem && e == org.xmlpull.v1.XmlPullParser.START_TAG && "title".equals(x.getName())) {
-                    String t = x.nextText().replace('\n', ' ').trim();
+                    // Some outlets' titles arrive with their entities escaped twice ("&amp;quot;").
+                    String t = NewsFeeds.clean(x.nextText());
                     int dash = t.lastIndexOf(" - ");
                     if (dash > 0) t = t.substring(0, dash) + "  \u00B7  " + t.substring(dash + 3);
                     title = t;
