@@ -40,6 +40,8 @@ import java.util.Map;
 public final class VoiceSearchActivity extends Activity {
 
     private static final int REQ_MIC = 1;
+    /** A request already in words (a test over adb, or another part of the launcher): acted on without listening. */
+    static final String EXTRA_QUERY = "query";
     static final String TV_APP = "com.tcl.tv";
     private static final String YOUTUBE = "com.google.android.youtube.tv";
     private static final String YOUTUBE_MUSIC = "com.google.android.youtube.tvmusic";
@@ -83,8 +85,15 @@ public final class VoiceSearchActivity extends Activity {
             return false;
         });
         findViewById(R.id.missingCancel).setOnClickListener(v -> finish());
-        mic.requestFocus();
-        listen();
+        String given = getIntent().getStringExtra(EXTRA_QUERY);
+        if (given != null && !given.trim().isEmpty()) {
+            query.setText(given);
+            handle(given);
+        } else {
+            // After the window is up: before that the text line, the first focusable view, took focus.
+            mic.post(mic::requestFocus);
+            listen();
+        }
     }
 
     /** Holding Right here, as on Home, listens again. */
