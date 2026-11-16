@@ -46,4 +46,6 @@
     <string name="fork_qs_settings_panel">Launcher settings</string>
     <string name="fork_key_live_tv">Live TV button</string>
     <string name="fork_key_live_tv_action">Live TV (antenna)</string>
+    <string name="fork_news_every">Refresh headlines</string>
+    <string name="fork_news_every_minutes">Every %1$d min</string>
 </resources>

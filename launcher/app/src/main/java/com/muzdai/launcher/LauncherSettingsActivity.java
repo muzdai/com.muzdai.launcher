@@ -688,6 +688,24 @@ public final class LauncherSettingsActivity extends Activity {
                 });
         topic.enabled = news;
         p.add(topic);
+        Item every = choice(0, getString(R.string.fork_news_every),
+                () -> {
+                    String[] labels = new String[InfoWidgets.NEWS_EVERY.length];
+                    for (int k = 0; k < labels.length; k++) {
+                        labels[k] = getString(R.string.fork_news_every_minutes, InfoWidgets.NEWS_EVERY[k]);
+                    }
+                    return labels;
+                },
+                () -> {
+                    int m = InfoWidgets.newsEveryMinutes(this);
+                    for (int k = 0; k < InfoWidgets.NEWS_EVERY.length; k++) if (InfoWidgets.NEWS_EVERY[k] == m) return k;
+                    return 0;
+                }, v -> {
+                    InfoWidgets.prefs(this).edit().putInt(InfoWidgets.KEY_NEWS_EVERY, InfoWidgets.NEWS_EVERY[v]).apply();
+                    changed();
+                });
+        every.enabled = news;
+        p.add(every);
         Item size = slider(getString(R.string.fork_news_size), null, 16, 40, 2,
                 () -> np.getInt(InfoWidgets.KEY_NEWS_SIZE, InfoWidgets.NEWS_SIZE_DEFAULT), v -> {
                     np.edit().putInt(InfoWidgets.KEY_NEWS_SIZE, v).apply();

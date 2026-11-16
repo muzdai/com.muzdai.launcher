@@ -186,7 +186,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         @Override
         public void run() {
             refreshInfoWidgets();
-            if (root != null) root.postDelayed(this, 10L * 60 * 1000);
+            // Weather and rates keep their own ages; the tick follows the news interval when that is shorter.
+            long every = Math.min(10, InfoWidgets.newsEveryMinutes(MainActivity.this)) * 60_000L;
+            if (root != null) root.postDelayed(this, every);
         }
     };
     /** library_excluded_apps: packages the App library catalogue never offers. */

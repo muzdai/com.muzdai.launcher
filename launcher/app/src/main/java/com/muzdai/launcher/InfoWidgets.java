@@ -60,12 +60,23 @@ final class InfoWidgets {
     static final int NEWS_BG_DEFAULT = 50;
     private static final String KEY_NEWS = "news_titles";
     private static final String KEY_NEWS_AT = "news_at";
-    private static final long NEWS_MAX_AGE_MS = 30L * 60 * 1000;
+    /** How often the ticker fetches new headlines, minutes (Launcher settings); NEWS_EVERY_DEFAULT unless chosen. */
+    static final String KEY_NEWS_EVERY = "news_every_min";
+    static final int[] NEWS_EVERY = {5, 10, 15, 30, 60};
+    static final int NEWS_EVERY_DEFAULT = 10;
+
+    static int newsEveryMinutes(Context ctx) {
+        int m = prefs(ctx).getInt(KEY_NEWS_EVERY, NEWS_EVERY_DEFAULT);
+        for (int v : NEWS_EVERY) if (v == m) return m;
+        return NEWS_EVERY_DEFAULT;
+    }
     /** Google News sections, Ukrainian edition in Russian (top stories ranked by Google); "TOP" is the front page. */
     static final String[] NEWS_TOPICS = {"WORLD", "TOP", "GEORGIA", "BUSINESS", "TECHNOLOGY", "SCIENCE", "SPORTS",
             "ENTERTAINMENT", "HEALTH"};
     static final String KEY_NEWS_TOPIC = "news_topic";
     private static final String KEY_NEWS_FOR = "news_for";
+    /** Part of what the cached headlines are for: a new source (the Ukrainian edition, filtered) refetches them. */
+    private static final String NEWS_SOURCE = "|ua-filtered";
 
     static String newsTopic(Context ctx) {
         String t = prefs(ctx).getString(KEY_NEWS_TOPIC, "WORLD");
@@ -262,8 +273,11 @@ final class InfoWidgets {
                     || now - p.getLong(KEY_WEATHER_AT, 0) > WEATHER_MAX_AGE_MS);
         boolean needRates = rates && now - lastRatesTry > RETRY_MS
                 && now - p.getLong(KEY_RATES_AT, 0) > RATES_MAX_AGE_MS;
-        boolean needNews = news && now - lastNewsTry > RETRY_MS && (now - p.getLong(KEY_NEWS_AT, 0) > NEWS_MAX_AGE_MS
-                || !newsTopic(app).equals(p.getString(KEY_NEWS_FOR, "")));
+        long newsEvery = newsEveryMinutes(app) * 60_000L;
+        // Retries after a failure no sooner than the refresh interval allows (at most every 5 minutes).
+        boolean needNews = news && now - lastNewsTry > Math.min(RETRY_MS, newsEvery) - 30_000L
+                && (now - p.getLong(KEY_NEWS_AT, 0) > newsEvery - 30_000L
+                || !(newsTopic(app) + NEWS_SOURCE).equals(p.getString(KEY_NEWS_FOR, "")));
         if (!needWeather && !needRates && !needNews) return;
         if (needWeather) lastWeatherTry = now;
         if (needRates) lastRatesTry = now;
@@ -347,7 +361,7 @@ final class InfoWidgets {
             }
             if (n == 0) return false;
             prefs(ctx).edit().putString(KEY_NEWS, out.toString()).putLong(KEY_NEWS_AT, System.currentTimeMillis())
-                    .putString(KEY_NEWS_FOR, topic).apply();
+                    .putString(KEY_NEWS_FOR, topic + NEWS_SOURCE).apply();
             return true;
         } catch (Exception e) {
             Log.w(TAG, "news: " + e.getMessage());
