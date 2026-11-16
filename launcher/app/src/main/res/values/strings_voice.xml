@@ -4,6 +4,7 @@
     <string name="voice_search">Voice search</string>
     <string name="voice_hint_type">Say or type what to find</string>
     <string name="voice_listening">Listening…</string>
+    <string name="voice_thinking">Thinking…</string>
     <string name="voice_choose">Choose where to look</string>
     <string name="voice_err_nomatch">Didn\'t catch that, try again</string>
     <string name="voice_err_permission">No access to the microphone</string>
@@ -19,4 +20,23 @@
     <string name="voice_looking_up">Looking it up on Google Play…</string>
     <string name="voice_play_market">Google Play</string>
     <string name="cancel">Cancel</string>
+    <string name="s_voice_summary_ai">AI understands the request</string>
+    <string name="s_voice_summary_plain">Without AI</string>
+    <string name="s_voice_ai">AI (Google Gemini)</string>
+    <string name="s_voice_ai_on">Understand requests with AI</string>
+    <string name="s_voice_ai_desc">Gemini fixes misheard names and works out what to open or play and where. Without a key or without the internet the plain rules decide.</string>
+    <string name="s_voice_ai_key">Gemini key</string>
+    <string name="s_voice_ai_key_set">Set</string>
+    <string name="s_voice_ai_key_none">Not set</string>
+    <string name="s_voice_ai_key_hint">The free key from Google AI Studio</string>
+    <string name="s_voice_ai_key_file">Take the key from gemini-key.txt</string>
+    <string name="s_voice_ai_key_file_desc">In Android/data/com.muzdai.launcher/files or Download</string>
+    <string name="s_voice_ai_key_file_none">No readable gemini-key.txt found</string>
+    <string name="s_voice_ai_check">Check the key</string>
+    <string name="s_voice_ai_model_none">Not checked yet</string>
+    <string name="s_voice_ai_checking">Checking the key…</string>
+    <string name="s_voice_ai_ok">The key works: %1$s</string>
+    <string name="s_voice_ai_failed">The key does not work, or there is no internet</string>
+    <string name="s_voice_music">Music</string>
+    <string name="s_voice_music_app">Default music app</string>
 </resources>

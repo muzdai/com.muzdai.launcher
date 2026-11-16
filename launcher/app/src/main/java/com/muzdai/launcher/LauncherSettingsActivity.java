@@ -542,6 +542,8 @@ public final class LauncherSettingsActivity extends Activity {
         p.add(wallpaperChoice());
         p.add(nav(R.drawable.ic_s_cloud, getString(R.string.s_info), () -> getString(R.string.s_info_summary), this::infoPage));
         p.add(nav(R.drawable.ic_s_remote, getString(R.string.fork_keys_title), () -> getString(R.string.s_keys_summary), this::keysPage));
+        p.add(nav(R.drawable.ic_mic, getString(R.string.voice_search), () -> getString(VoiceAi.enabled(this)
+                ? R.string.s_voice_summary_ai : R.string.s_voice_summary_plain), this::voicePage));
         p.add(nav(R.drawable.ic_s_motion, getString(R.string.s_motion), () -> getString(animations()
                 ? R.string.on : R.string.off), this::motionPage));
         Item reset = nav(R.drawable.ic_s_restore, getString(R.string.s_reset), () -> getString(R.string.s_reset_summary),
@@ -761,6 +763,88 @@ public final class LauncherSettingsActivity extends Activity {
             }, v -> ForkKeys.set(this, code, options.get(v)[1])));
         }
         return p;
+    }
+
+    // ---- voice search -----------------------------------------------------------------------------------
+
+    private Page voicePage() {
+        Page p = new Page(getString(R.string.voice_search));
+        SharedPreferences v = VoiceAi.prefs(this);
+        p.add(header(R.string.s_voice_ai));
+        p.add(toggle(getString(R.string.s_voice_ai_on), getString(R.string.s_voice_ai_desc),
+                () -> v.getBoolean(VoiceAi.KEY_ON, true), on -> v.edit().putBoolean(VoiceAi.KEY_ON, on).apply()));
+        p.add(action(0, getString(R.string.s_voice_ai_key), () -> getString(VoiceAi.key(this) != null
+                ? R.string.s_voice_ai_key_set : R.string.s_voice_ai_key_none), this::showAiKeyInput));
+        p.add(action(0, getString(R.string.s_voice_ai_key_file), () -> getString(R.string.s_voice_ai_key_file_desc), () -> {
+            String k = VoiceAi.keyFromFile(this);
+            if (k == null) {
+                Toast.makeText(this, R.string.s_voice_ai_key_file_none, Toast.LENGTH_LONG).show();
+                return;
+            }
+            saveAiKey(k);
+        }));
+        p.add(action(0, getString(R.string.s_voice_ai_check), () -> v.getString(VoiceAi.KEY_MODEL,
+                getString(R.string.s_voice_ai_model_none)), this::checkAi));
+        p.add(header(R.string.s_voice_music));
+        VoiceActions actions = new VoiceActions(this);
+        List<String> music = new ArrayList<>();
+        for (String pkg : VoiceActions.MUSIC_APPS) if (actions.installed(pkg)) music.add(pkg);
+        String[] labels = new String[music.size()];
+        for (int i = 0; i < labels.length; i++) labels[i] = actions.label(music.get(i));
+        p.add(choice(0, getString(R.string.s_voice_music_app), () -> labels,
+                () -> music.indexOf(actions.musicApp()),
+                i -> v.edit().putString(VoiceActions.KEY_MUSIC, music.get(i)).apply()));
+        return p;
+    }
+
+    private void showAiKeyInput() {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setHint(R.string.s_voice_ai_key_hint);
+        FrameLayout box = new FrameLayout(this);
+        box.setPadding(dp(24), dp(8), dp(24), 0);
+        box.addView(input);
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(R.string.s_voice_ai_key)
+                .setView(box)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String k = input.getText().toString().trim();
+                    if (!k.isEmpty()) saveAiKey(k);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** A new key: the model is picked again for it, at once. */
+    private void saveAiKey(String key) {
+        VoiceAi.prefs(this).edit().putString(VoiceAi.KEY_KEY, key).remove(VoiceAi.KEY_MODEL).apply();
+        checkAi();
+    }
+
+    /** Checks the key off the main thread and keeps the model that answered. */
+    private void checkAi() {
+        String key = VoiceAi.key(this);
+        if (key == null) {
+            Toast.makeText(this, R.string.s_voice_ai_key_none, Toast.LENGTH_LONG).show();
+            return;
+        }
+        Toast.makeText(this, R.string.s_voice_ai_checking, Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            String model;
+            try {
+                model = VoiceAi.check(key);
+                VoiceAi.prefs(this).edit().putString(VoiceAi.KEY_MODEL, model).apply();
+            } catch (java.io.IOException | RuntimeException e) {
+                model = null;
+            }
+            String result = model;
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                Toast.makeText(this, result != null ? getString(R.string.s_voice_ai_ok, result)
+                        : getString(R.string.s_voice_ai_failed), Toast.LENGTH_LONG).show();
+                refresh();
+            });
+        }, "ai-check").start();
     }
 
     private Page motionPage() {

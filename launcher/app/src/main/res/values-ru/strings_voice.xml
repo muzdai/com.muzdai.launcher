@@ -3,6 +3,7 @@
     <string name="voice_search">Голосовой поиск</string>
     <string name="voice_hint_type">Скажите или введите, что найти</string>
     <string name="voice_listening">Говорите…</string>
+    <string name="voice_thinking">Думаю…</string>
     <string name="voice_choose">Выберите, где искать</string>
     <string name="voice_err_nomatch">Не расслышал, попробуйте ещё раз</string>
     <string name="voice_err_permission">Нет доступа к микрофону</string>
@@ -18,4 +19,23 @@
     <string name="voice_looking_up">Ищу в Play Market…</string>
     <string name="voice_play_market">Play Market</string>
     <string name="cancel">Отмена</string>
+    <string name="s_voice_summary_ai">Запрос понимает ИИ</string>
+    <string name="s_voice_summary_plain">Без ИИ</string>
+    <string name="s_voice_ai">ИИ (Google Gemini)</string>
+    <string name="s_voice_ai_on">Понимать запросы с помощью ИИ</string>
+    <string name="s_voice_ai_desc">Gemini исправляет неверно расслышанные названия и решает, что и где открыть или включить. Без ключа или без интернета работают обычные правила.</string>
+    <string name="s_voice_ai_key">Ключ Gemini</string>
+    <string name="s_voice_ai_key_set">Задан</string>
+    <string name="s_voice_ai_key_none">Не задан</string>
+    <string name="s_voice_ai_key_hint">Бесплатный ключ из Google AI Studio</string>
+    <string name="s_voice_ai_key_file">Взять ключ из gemini-key.txt</string>
+    <string name="s_voice_ai_key_file_desc">В Android/data/com.muzdai.launcher/files или в Download</string>
+    <string name="s_voice_ai_key_file_none">Файл gemini-key.txt не найден или недоступен</string>
+    <string name="s_voice_ai_check">Проверить ключ</string>
+    <string name="s_voice_ai_model_none">Ещё не проверен</string>
+    <string name="s_voice_ai_checking">Проверяю ключ…</string>
+    <string name="s_voice_ai_ok">Ключ работает: %1$s</string>
+    <string name="s_voice_ai_failed">Ключ не работает или нет интернета</string>
+    <string name="s_voice_music">Музыка</string>
+    <string name="s_voice_music_app">Музыкальное приложение по умолчанию</string>
 </resources>

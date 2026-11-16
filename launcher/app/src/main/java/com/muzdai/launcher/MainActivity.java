@@ -2593,15 +2593,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         @Override public void onResult(String text) {
             if (isFinishing() || isDestroyed()) return;
-            VoiceActions.Plan p = new VoiceActions(MainActivity.this).plan(text);
-            if (p.kind == VoiceActions.Plan.Kind.START) {
-                Toast.makeText(MainActivity.this, "«" + text + "»", Toast.LENGTH_SHORT).show();
-                open(p.intent);
-            } else {
-                // A choice to make: where to search, or an app that is not installed.
-                open(new Intent(MainActivity.this, VoiceSearchActivity.class)
-                        .putExtra(VoiceSearchActivity.EXTRA_QUERY, text));
-            }
+            Toast.makeText(MainActivity.this, "«" + text + "»", Toast.LENGTH_SHORT).show();
+            // The AI reads the words off the main thread; the button stays lit meanwhile.
+            btnVoice.setActivated(true);
+            VoiceActions actions = new VoiceActions(MainActivity.this);
+            new Thread(() -> {
+                VoiceActions.Plan p = actions.planWithAi(text);
+                runOnUiThread(() -> {
+                    if (voice == null || !voice.listening()) btnVoice.setActivated(false);
+                    if (isFinishing() || isDestroyed()) return;
+                    if (p.kind == VoiceActions.Plan.Kind.START) {
+                        open(p.intent);
+                    } else {
+                        // A choice to make: where to search, or an app that is not installed.
+                        startActivity(new Intent(MainActivity.this, VoiceSearchActivity.class)
+                                .putExtra(VoiceSearchActivity.EXTRA_QUERY, text)
+                                .putExtra(VoiceSearchActivity.EXTRA_PLAN, VoiceSearchActivity.pack(p)));
+                    }
+                });
+            }, "voice-ai").start();
         }
         @Override public void onError(int messageRes, int code) {
             Toast.makeText(MainActivity.this, getString(messageRes, code), Toast.LENGTH_SHORT).show();

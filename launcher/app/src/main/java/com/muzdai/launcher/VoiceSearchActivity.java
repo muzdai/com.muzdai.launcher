@@ -32,6 +32,8 @@ public final class VoiceSearchActivity extends Activity {
     private static final int REQ_MIC = 1;
     /** The request in words, from Home or from a test over adb. */
     static final String EXTRA_QUERY = "query";
+    /** Home's plan for it (pack()), so the AI is not asked twice; without it the panel works the request out. */
+    static final String EXTRA_PLAN = "plan";
 
     private EditText query;
     private TextView hint;
@@ -87,7 +89,11 @@ public final class VoiceSearchActivity extends Activity {
         });
         findViewById(R.id.missingCancel).setOnClickListener(v -> finish());
         String given = getIntent().getStringExtra(EXTRA_QUERY);
-        if (given != null && !given.trim().isEmpty()) {
+        Bundle packed = getIntent().getBundleExtra(EXTRA_PLAN);
+        if (given != null && packed != null) {
+            query.setText(given);
+            apply(unpack(packed));
+        } else if (given != null && !given.trim().isEmpty()) {
             query.setText(given);
             handle(given);
         } else {
@@ -147,7 +153,33 @@ public final class VoiceSearchActivity extends Activity {
         voice.cancel();
         hideKeyboard();
         if (text == null || text.trim().isEmpty()) return;
-        VoiceActions.Plan p = actions.plan(text);
+        clearResults();
+        hint.setText(R.string.voice_thinking);
+        new Thread(() -> {
+            VoiceActions.Plan p = actions.planWithAi(text);
+            runOnUiThread(() -> {
+                if (!isFinishing() && !isDestroyed()) apply(p);
+            });
+        }, "voice-ai").start();
+    }
+
+    /** A CHOICES or MISSING plan as extras, for Home to hand over; START never needs the panel. */
+    static Bundle pack(VoiceActions.Plan p) {
+        Bundle b = new Bundle();
+        b.putString("kind", p.kind.name());
+        b.putString("query", p.query);
+        b.putString("maybeApp", p.maybeApp);
+        b.putString("pkg", p.pkg);
+        b.putString("name", p.name);
+        return b;
+    }
+
+    private static VoiceActions.Plan unpack(Bundle b) {
+        return VoiceActions.Plan.of(VoiceActions.Plan.Kind.valueOf(b.getString("kind")), null, b.getString("query"),
+                b.getString("maybeApp"), b.getString("pkg"), b.getString("name"));
+    }
+
+    private void apply(VoiceActions.Plan p) {
         switch (p.kind) {
             case START:
                 if (start(p.intent)) finish();

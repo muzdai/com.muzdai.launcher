@@ -4,12 +4,14 @@ import android.app.SearchManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.provider.Settings;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,8 +31,13 @@ final class VoiceActions {
     static final String ALPAC = "cc.alcopa.tv";
     static final String EMBY = "tv.emby.embyatv";
     static final String DEEZER = "deezer.android.app";
+    static final String QOBUZ = "com.qobuz.music";
     /** Where "search in …" rows are offered for a plain search, in this order, when installed. */
     static final String[] SEARCH_APPS = {YOUTUBE, ALPAC, EMBY, SPOTIFY, DEEZER, TV_APP};
+    /** The music apps offered as the default one in settings, when installed. */
+    static final String[] MUSIC_APPS = {YOUTUBE, YOUTUBE_MUSIC, SPOTIFY, DEEZER, QOBUZ};
+    /** Settings (VoiceAi.PREFS): where music goes when no app is named. */
+    static final String KEY_MUSIC = "music_app";
 
     /** The outcome of a request. */
     static final class Plan {
@@ -43,6 +50,10 @@ final class VoiceActions {
         final String query, maybeApp;
         /** MISSING: the package (null when it has no Play Store listing) and the name to show. */
         final String pkg, name;
+
+        static Plan of(Kind kind, Intent intent, String query, String maybeApp, String pkg, String name) {
+            return new Plan(kind, intent, query, maybeApp, pkg, name);
+        }
 
         private Plan(Kind kind, Intent intent, String query, String maybeApp, String pkg, String name) {
             this.kind = kind;
@@ -67,6 +78,61 @@ final class VoiceActions {
         for (ResolveInfo ri : found) {
             if (ri.activityInfo == null || ctx.getPackageName().equals(ri.activityInfo.packageName)) continue;
             labels.put(String.valueOf(ri.loadLabel(pm)), ri.activityInfo.packageName);
+        }
+    }
+
+    /**
+     * The plan for a request, read by the AI when it is on and has a key; the plain rules otherwise, or when the AI
+     * fails (no network, a bad key, no answer in time). Blocking: off the main thread only.
+     */
+    Plan planWithAi(String text) {
+        if (VoiceAi.enabled(ctx)) {
+            SharedPreferences p = VoiceAi.prefs(ctx);
+            try {
+                String key = VoiceAi.key(ctx);
+                String model = p.getString(VoiceAi.KEY_MODEL, null);
+                if (model == null) {
+                    model = VoiceAi.check(key);
+                    p.edit().putString(VoiceAi.KEY_MODEL, model).apply();
+                }
+                Plan ai = fromAnswer(VoiceAi.understand(key, model, text, labels, musicApp()), text);
+                if (ai != null) return ai;
+            } catch (IOException e) {
+                // A model that went away (404): pick another on the next request.
+                if (String.valueOf(e.getMessage()).contains("404")) p.edit().remove(VoiceAi.KEY_MODEL).apply();
+            }
+        }
+        return plan(text);
+    }
+
+    /** The music app chosen in settings, if still installed; else the first installed of MUSIC_APPS. */
+    String musicApp() {
+        String chosen = VoiceAi.prefs(ctx).getString(KEY_MUSIC, null);
+        if (installed(chosen)) return chosen;
+        for (String pkg : MUSIC_APPS) if (installed(pkg)) return pkg;
+        return YOUTUBE;
+    }
+
+    /** A plan from the AI's answer, or null when it is of no use (the rules then decide). */
+    Plan fromAnswer(VoiceAi.Answer a, String spoken) {
+        String q = a.query.isEmpty() ? spoken : a.query;
+        switch (a.action) {
+            case "tv":
+                return installed(TV_APP) ? start(tvIntent(q)) : new Plan(Plan.Kind.CHOICES, null, q, null, null, null);
+            case "open":
+                if (installed(a.app)) return start(openIntent(a.app));
+                if (!a.name.isEmpty()) {
+                    String notOnPlay = AppNames.notOnPlay(a.name);
+                    if (notOnPlay != null) return new Plan(Plan.Kind.MISSING, null, null, null, null, notOnPlay);
+                    String pkg = !a.app.isEmpty() ? a.app : a.guess.isEmpty() ? null : a.guess;
+                    String name = pkg != null && AppNames.name(pkg) != null ? AppNames.name(pkg) : a.name;
+                    return new Plan(Plan.Kind.MISSING, null, null, null, pkg, name);
+                }
+                return null;
+            default:   // play, search
+                if (installed(a.app)) return start(searchIntent(a.app, q));
+                if (!a.app.isEmpty() && AppNames.name(a.app) != null) return missing(a.app, AppNames.name(a.app));
+                return new Plan(Plan.Kind.CHOICES, null, q, null, null, null);
         }
     }
 
