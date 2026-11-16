@@ -1,9 +1,8 @@
 package com.muzdai.launcher;
 
+import android.app.NotificationManager;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.pm.PackageManager;
-import android.provider.Settings;
 import android.service.notification.NotificationListenerService;
 
 /**
@@ -16,24 +15,21 @@ public class MediaListener extends NotificationListenerService {
         return new ComponentName(ctx, MediaListener.class);
     }
 
-    /** Turns this listener on once (WRITE_SECURE_SETTINGS, allowlisted for the privileged launcher); true when on. */
+    /**
+     * True once this listener is allowed. The first time it asks the TV's own ADB (LocalAdb), which needs network
+     * debugging on and this launcher's key allowed, as the tile menu's Close does. Blocking: off the main thread.
+     */
     static boolean ensureEnabled(Context ctx) {
-        String me = component(ctx).flattenToString();
-        String on = Settings.Secure.getString(ctx.getContentResolver(), "enabled_notification_listeners");
-        if (on != null) {
-            for (String c : on.split(":")) {
-                ComponentName cn = ComponentName.unflattenFromString(c);
-                if (cn != null && cn.equals(component(ctx))) return true;
-            }
+        if (granted(ctx)) return true;
+        return LocalAdb.allowListener(ctx, component(ctx)) && granted(ctx);
+    }
+
+    private static boolean granted(Context ctx) {
+        if (android.os.Build.VERSION.SDK_INT >= 27) {
+            NotificationManager nm = ctx.getSystemService(NotificationManager.class);
+            return nm != null && nm.isNotificationListenerAccessGranted(component(ctx));
         }
-        if (ctx.checkSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS) != PackageManager.PERMISSION_GRANTED) {
-            return false;
-        }
-        try {
-            return Settings.Secure.putString(ctx.getContentResolver(), "enabled_notification_listeners",
-                    on == null || on.isEmpty() ? me : on + ":" + me);
-        } catch (SecurityException e) {
-            return false;
-        }
+        String on = android.provider.Settings.Secure.getString(ctx.getContentResolver(), "enabled_notification_listeners");
+        return on != null && on.contains(component(ctx).flattenToString());
     }
 }

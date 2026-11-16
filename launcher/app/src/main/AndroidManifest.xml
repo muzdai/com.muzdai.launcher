@@ -25,10 +25,6 @@
     <!-- Voice search (VoiceSearchActivity). A runtime permission, not a privileged one: granted on the TV's prompt or
          with pm grant. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <!-- Turns on MediaListener (enabled_notification_listeners) for the Home mini player. Privileged: it is in the
-         Magisk module's allowlist (magisk/system/etc/permissions), as ro.control_privapp_permissions=enforce needs. -->
-    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
-        tools:ignore="ProtectedPermissions" />
 
     <!-- Android 11+ package visibility: lets the launcher list the TV apps it shows as tiles. -->
     <queries>

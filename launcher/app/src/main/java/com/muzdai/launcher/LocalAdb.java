@@ -36,7 +36,8 @@ import javax.crypto.Cipher;
  * prompt. It only works while USB/network debugging stays on.
  *
  * The key pair lives in the launcher's private files (adbkey, adbkey.pub). Only "am force-stop" and "pidof" for a
- * package name are ever sent.
+ * package name, "pm uninstall" of one, and "cmd notification allow_listener" for the launcher's own MediaListener are
+ * ever sent.
  */
 final class LocalAdb {
     private static final String TAG = "LocalAdb";
@@ -73,6 +74,18 @@ final class LocalAdb {
         if (!pkg.matches("[A-Za-z0-9_.]+")) return Result.FAILED;
         return exec(ctx, "pm uninstall --user 0 " + pkg,
                 output -> output.contains("Success") ? Result.UNINSTALLED : Result.FAILED);
+    }
+
+    /**
+     * Allows the launcher's own notification listener (MediaListener, for the mini player's media sessions). The
+     * system keeps its own list, so writing enabled_notification_listeners is not enough. Blocking.
+     */
+    static boolean allowListener(Context ctx, android.content.ComponentName own) {
+        if (!ctx.getPackageName().equals(own.getPackageName())) return false;
+        String c = own.flattenToString();
+        if (!c.matches("[A-Za-z0-9_./]+")) return false;
+        return exec(ctx, "cmd notification allow_listener " + c + " && echo ok",
+                output -> output.contains("ok") ? Result.STOPPED : Result.FAILED) == Result.STOPPED;
     }
 
     private static Result exec(Context ctx, String command, java.util.function.Function<String, Result> judge) {
