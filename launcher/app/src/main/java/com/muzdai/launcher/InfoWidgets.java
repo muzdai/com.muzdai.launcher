@@ -147,6 +147,8 @@ final class InfoWidgets {
 
     /** The top 10 headlines joined for the ticker, or null before the first answer. */
     static String newsLine(Context ctx) {
+        // Headlines cached from the earlier, unfiltered source are not shown, even before new ones arrive.
+        if (!prefs(ctx).getString(KEY_NEWS_FOR, "").endsWith(NEWS_SOURCE)) return null;
         String raw = prefs(ctx).getString(KEY_NEWS, null);
         if (raw == null || raw.isEmpty()) return null;
         return raw.replace("\n", "      \u2022      ");
@@ -333,7 +335,7 @@ final class InfoWidgets {
         try {
             org.xmlpull.v1.XmlPullParser x = android.util.Xml.newPullParser();
             String topic = newsTopic(ctx);
-            x.setInput(new java.io.StringReader(get(newsUrl(topic))));
+            x.setInput(new java.io.StringReader(getFeed(newsUrl(topic))));
             StringBuilder out = new StringBuilder();
             int n = 0;
             boolean inItem = false;
@@ -430,11 +432,25 @@ final class InfoWidgets {
     }
 
     private static String get(String address) throws Exception {
+        return get(address, "application/json", null);
+    }
+
+    /**
+     * Google News answers a feed request that looks like a script (Dalvik, Accept JSON) with 429 more often: ask
+     * for XML as a browser would.
+     */
+    private static String getFeed(String address) throws Exception {
+        return get(address, "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+                "Mozilla/5.0 (Linux; Android 14; Google TV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36");
+    }
+
+    private static String get(String address, String accept, String agent) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(address).openConnection();
         try {
             c.setConnectTimeout(TIMEOUT_MS);
             c.setReadTimeout(TIMEOUT_MS);
-            c.setRequestProperty("Accept", "application/json");
+            c.setRequestProperty("Accept", accept);
+            if (agent != null) c.setRequestProperty("User-Agent", agent);
             int code = c.getResponseCode();
             if (code != 200) throw new java.io.IOException("HTTP " + code);
             try (InputStream in = c.getInputStream()) {
