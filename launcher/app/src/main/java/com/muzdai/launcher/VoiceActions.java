@@ -99,7 +99,12 @@ final class VoiceActions {
                     model = VoiceAi.check(key);
                     p.edit().putString(VoiceAi.KEY_MODEL, model).apply();
                 }
-                Plan ai = fromAnswer(VoiceAi.understand(key, model, text, labels, musicApp()), text);
+                VoiceAi.Answer answer = VoiceAi.understand(key, model, text, labels, musicApp());
+                if (answer != null) {
+                    android.util.Log.i("VoiceActions", "ai: " + answer.action + " app=" + answer.app + " kind="
+                            + answer.kind + " query=" + answer.query);
+                }
+                Plan ai = answer == null ? null : fromAnswer(answer, text);
                 if (ai != null) return ai;
             } catch (IOException e) {
                 // A model that went away (404): pick another on the next request.
@@ -221,6 +226,7 @@ final class VoiceActions {
             }
             return r == null || r.isEmpty() ? null : r.get(0);
         } catch (IOException | RuntimeException e) {
+            android.util.Log.w("VoiceActions", "album search: " + e);
             return null;
         }
     }
@@ -272,8 +278,8 @@ final class VoiceActions {
                 default:
                     break;
             }
-        } catch (IOException | RuntimeException ignored) {
-            // this source is out; the others still count
+        } catch (IOException | RuntimeException e) {
+            android.util.Log.w("VoiceActions", app + " search: " + e);   // this source is out; the others still count
         }
         return new ArrayList<>();
     }
