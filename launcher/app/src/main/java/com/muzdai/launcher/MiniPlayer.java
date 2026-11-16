@@ -146,7 +146,9 @@ final class MiniPlayer {
     private ImageButton button(int icon, int label) {
         ImageButton b = new ImageButton(act);
         b.setImageResource(icon);
-        b.setImageTintList(act.getColorStateList(R.drawable.pill_text));
+        // pill_text's colours: dark on the white of focus, white otherwise.
+        b.setImageTintList(new android.content.res.ColorStateList(
+                new int[][]{{android.R.attr.state_focused}, {}}, new int[]{0xFF111111, 0xFFFFFFFF}));
         b.setBackgroundResource(R.drawable.mini_button_bg);
         b.setContentDescription(act.getString(label));
         b.setFocusable(true);
