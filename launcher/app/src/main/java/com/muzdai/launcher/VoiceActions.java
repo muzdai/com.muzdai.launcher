@@ -161,6 +161,7 @@ final class VoiceActions {
                 Plan ai = answer == null ? null : fromAnswer(answer, text);
                 if (ai != null) return ai;
             } catch (IOException e) {
+                android.util.Log.w("VoiceActions", "ai failed: " + e);
                 // A model that went away (404): pick another on the next request.
                 if (String.valueOf(e.getMessage()).contains("404")) p.edit().remove(VoiceAi.KEY_MODEL).apply();
             }
@@ -168,8 +169,8 @@ final class VoiceActions {
         String closing = closeTarget(text);
         if (closing != null) return close(closing.isEmpty() ? null : AppNames.find(closing, labels));
         Plan rules = plan(text);
-        if (activeApp != null && rules.kind == Plan.Kind.CHOICES && rules.maybeApp == null) {
-            // No app named over a player: that player's search.
+        if (activeApp != null && rules.kind == Plan.Kind.CHOICES) {
+            // No installed app named, with a player open or playing: that player's search.
             ContentSearch.Card c = first(activeApp, "", rules.query);
             return c != null ? play(c) : start(searchIntent(activeApp, rules.query));
         }
