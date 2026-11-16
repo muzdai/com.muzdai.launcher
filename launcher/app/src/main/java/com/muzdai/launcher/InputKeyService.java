@@ -45,6 +45,8 @@ public class InputKeyService extends AccessibilityService {
 
     @Override
     protected boolean onKeyEvent(KeyEvent event) {
+        // TCL Channel is voice search, whatever app is in front.
+        if (event.getKeyCode() == ForkKeys.VOICE_KEY) return RemoteKeys.handle(this, event, RemoteKeys.VOICE, null);
         // vPro: the owner's choice for this button in Launcher settings wins over config.xml app_keys.
         String chosen = ForkKeys.target(this, event.getKeyCode());
         if (chosen != null && RemoteKeys.handle(this, event, chosen, null)) return true;

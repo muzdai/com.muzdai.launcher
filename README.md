@@ -52,9 +52,9 @@ choices are stored on the TV on top of them.
 
 ## Remote buttons
 
-Netflix (4062), Prime Video (4099), YouTube (190), TCL Channel (4020) and Live TV (4001), as a TCL G08 remote sends
-them. Each can open any TV app, the Inputs panel, Live TV (the hardware tuner), Launcher settings, nothing, or
-keep its default. The gear (83) opens Launcher settings, Input (178) the Inputs panel. The key helper is an
+Netflix (4062), Prime Video (4099), YouTube (190) and Live TV (4001), as a TCL G08 remote sends them. Each can open
+any TV app, the Inputs panel, Live TV (the hardware tuner), Launcher settings, nothing, or keep its default. The gear
+(83) opens Launcher settings, Input (178) the Inputs panel, TCL Channel (4020) voice search. The key helper is an
 accessibility service (`InputKeyService`); the TV must have it enabled:
 
 ```

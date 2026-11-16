@@ -41,7 +41,6 @@
     <string name="fork_key_netflix">Netflix button</string>
     <string name="fork_key_prime">Prime Video button</string>
     <string name="fork_key_youtube">YouTube button</string>
-    <string name="fork_key_tcl_channel">TCL Channel button</string>
     <string name="fork_key_default">Default</string>
     <string name="fork_key_nothing">Nothing</string>
     <string name="fork_qs_settings_panel">Launcher settings</string>

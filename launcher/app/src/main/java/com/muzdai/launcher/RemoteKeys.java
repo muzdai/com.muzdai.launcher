@@ -44,6 +44,8 @@ final class RemoteKeys {
 
     /** The app_keys target that opens the input switcher, as "scan:365:inputs". */
     static final String INPUTS = "inputs";
+    /** Voice search (TCL Channel): on Home in place, elsewhere the voice panel. */
+    static final String VOICE = "voice";
     /** vPro: the Inputs list over the app on screen (InputsOverlayActivity), without going Home. */
     static final String INPUTS_OVERLAY = "inputs_overlay";
 
@@ -367,6 +369,10 @@ final class RemoteKeys {
         if ("tuner".equals(pkg)) {
             String tuner = ForkKeys.tunerTarget(ctx);
             if (tuner != null) launch(ctx, tuner);
+            return;
+        }
+        if (VOICE.equals(pkg)) {
+            MainActivity.voiceKey(ctx);
             return;
         }
         if (INPUTS_OVERLAY.equals(pkg)) {

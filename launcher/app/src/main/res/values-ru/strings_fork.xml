@@ -40,7 +40,6 @@
     <string name="fork_key_netflix">Кнопка Netflix</string>
     <string name="fork_key_prime">Кнопка Prime Video</string>
     <string name="fork_key_youtube">Кнопка YouTube</string>
-    <string name="fork_key_tcl_channel">Кнопка TCL Channel</string>
     <string name="fork_key_default">По умолчанию</string>
     <string name="fork_key_nothing">Ничего</string>
     <string name="fork_qs_settings_panel">Настройки лаунчера</string>

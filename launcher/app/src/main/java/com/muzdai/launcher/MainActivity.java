@@ -762,6 +762,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onResume() {
         super.onResume();
         resumed = true;
+        inFront = this;
         if (root != null) {
             root.removeCallbacks(infoTick);
             root.post(infoTick);
@@ -941,13 +942,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onPause() {
         super.onPause();
         resumed = false;
+        if (inFront == this) inFront = null;
         if (root != null) root.removeCallbacks(infoTick);
         if (newsTicker != null) newsTicker.setRunning(false);
         // No UP reaches a paused Home, so a vendor-key hold it saw go down would still open its app later.
         // Only Home's own share is dropped: a key service that saw the same DOWN keeps its hold.
         RemoteKeys.release(this);
         cancelHoldOk();
-        cancelHoldRight();
         endReorder();   // Home or another app while reordering keeps the order so far
         if (voice != null) voice.cancel();
         wallpaperPlayer.stop();
@@ -1000,7 +1001,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (libraryFocusPending && appLibrary == null) focusLibrary();
         } else {
             cancelHoldOk();   // a dialog or another window took the remote while OK was held
-            cancelHoldRight();
         }
     }
 
@@ -1009,7 +1009,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onDestroy();
         RemoteKeys.release(this);
         cancelHoldOk();
-        cancelHoldRight();
         unregisterReceiver(packageReceiver);
         if (voice != null) voice.destroy();
         if (openOnStartOnWake) unregisterReceiver(wakeReceiver);
@@ -1039,7 +1038,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // taken after that would arm one nothing releases.
         if (resumed && event.getKeyCode() >= 1000 && RemoteKeys.handle(this, event, homeAppKeys.get(event.getKeyCode()),
                 homeHoldAppKeys.get(event.getKeyCode()))) return true;
-        if (holdRight(event)) return true;
+        // TCL Channel: voice search. InputKeyService normally takes it first (from any app); this is for when it is off.
+        if (event.getKeyCode() == ForkKeys.VOICE_KEY) {
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) openVoiceSearch();
+            return true;
+        }
         if (holdOk(event)) return true;
         if (tileMenuEnabled && !reordering && openPopup == null
                 && event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
@@ -2542,47 +2545,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * behind another screen. An interrupted press still counts as handled: its UP, if it comes back here, is eaten
      * rather than opening the tile.
      */
-    // ---- hold Right: voice search -------------------------------------------------------------------
-    // As in com.tcl.tv: Right held on Home opens voice search. The first press still moves focus as usual; the auto-repeats
-    // that follow are swallowed while the hold is timed, so a held Right does not run along the dock first.
+    // ---- voice search ---------------------------------------------------------------------------------
 
-    private static final long HOLD_RIGHT_MS = 600;
-    private boolean holdRightArmed, holdRightFired;
-    private final Runnable holdRightTimer = () -> {
-        if (!holdRightArmed) return;
-        holdRightArmed = false;
-        holdRightFired = true;
-        openVoiceSearch();
-    };
+    /** Home while it is in front, for the TCL Channel key in InputKeyService; null otherwise. Main thread only. */
+    private static MainActivity inFront;
 
-    /** True when the event belongs to a held Right and must not move focus. */
-    private boolean holdRight(KeyEvent event) {
-        if (event.getKeyCode() != KeyEvent.KEYCODE_DPAD_RIGHT) return false;
-        if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            if (event.getRepeatCount() == 0) {
-                handler.removeCallbacks(holdRightTimer);
-                holdRightFired = false;
-                holdRightArmed = resumed && !reordering && openPopup == null;
-                if (holdRightArmed) handler.postDelayed(holdRightTimer, HOLD_RIGHT_MS);
-                return false;
-            }
-            return holdRightArmed || holdRightFired;
+    /** TCL Channel (InputKeyService): Home in front listens in place; elsewhere the voice panel opens and listens. */
+    static void voiceKey(android.content.Context ctx) {
+        if (inFront != null && !inFront.isFinishing()) {
+            inFront.openVoiceSearch();
+            return;
         }
-        handler.removeCallbacks(holdRightTimer);
-        boolean fired = holdRightFired;
-        holdRightArmed = false;
-        holdRightFired = false;
-        return fired;
-    }
-
-    private void cancelHoldRight() {
-        handler.removeCallbacks(holdRightTimer);
-        holdRightArmed = false;
+        try {
+            ctx.startActivity(new Intent(ctx, VoiceSearchActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (ActivityNotFoundException ignored) {
+        }
     }
 
     /** Listens in place: a beep and the voice button lit red, no window; again while listening stops. */
     private void openVoiceSearch() {
-        cancelHoldRight();
         if (openPopup != null) openPopup.dismiss();
         if (voice == null) voice = new VoiceInput(this, voiceCallback);
         if (voice.listening()) {

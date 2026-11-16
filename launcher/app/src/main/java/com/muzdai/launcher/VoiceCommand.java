@@ -36,9 +36,12 @@ final class VoiceCommand {
             + "поищи|хочу посмотреть|хочу послушать)\\s+(.+)$");
     /** The last "на / в / во / через <app>" of the rest: "песни битлз на ютубе" → ("песни битлз", "ютубе"). */
     private static final Pattern IN = Pattern.compile("^(.+)\\s+(?:на|в|во|через)\\s+(.+)$");
-    private static final Pattern TV = Pattern.compile("(?U)(\\bканал\\w*|\\bтелеканал\\w*|по телевизору|по тв\\b"
-            + "|что (?:сейчас )?идет|программ\\w* передач|\\bтелепрограмм\\w*|\\bтелегид\\w*|\\bматч\\w*"
-            + "|\\bтрансляци\\w*|в эфире)");
+    /**
+     * Words of a TV programme request, on the normalized text. Plain letter classes, no \\b or \\w: Android's ICU regex
+     * rejects the (?U) flag the JVM needs for Cyrillic word boundaries, and VoiceCommand loads on Home.
+     */
+    private static final Pattern TV = Pattern.compile("(?:^| )(?:канал|телеканал|телепрограмм|телегид|матч|трансляци)"
+            + "[а-я]*|по телевизору|по тв(?: |$)|что (?:сейчас )?идет|программ[а-я]* передач|в эфире");
 
     /**
      * @param isApp whether a phrase names an app (installed or a known one): "ютуб", "ютубе", "спотифай"

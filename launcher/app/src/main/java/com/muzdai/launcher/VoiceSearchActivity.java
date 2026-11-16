@@ -19,7 +19,7 @@ import android.widget.Toast;
 import java.util.Locale;
 
 /**
- * The voice panel over Home, for requests that need a choice: where to search, or an app that is not installed
+ * The voice panel, for requests that need a choice: where to search, or an app that is not installed
  * (with its Google Play name and logo). Home listens in place and opens this with the words in {@link #EXTRA_QUERY};
  * opened without them (microphone permission not granted yet) it asks and listens itself. Its microphone listens again,
  * and its text line takes typed words.
@@ -94,15 +94,17 @@ public final class VoiceSearchActivity extends Activity {
         }
     }
 
-    /** Holding Right here, as on Home, listens again. */
+    /** TCL Channel again while the panel is up (singleTop): listen again; words given with it are acted on. */
     @Override
-    public boolean dispatchKeyEvent(KeyEvent event) {
-        if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_RIGHT && event.getAction() == KeyEvent.ACTION_DOWN
-                && event.getRepeatCount() == 1) {
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        String given = intent.getStringExtra(EXTRA_QUERY);
+        if (given != null && !given.trim().isEmpty()) {
+            query.setText(given);
+            handle(given);
+        } else {
             listen();
-            return true;
         }
-        return super.dispatchKeyEvent(event);
     }
 
     @Override

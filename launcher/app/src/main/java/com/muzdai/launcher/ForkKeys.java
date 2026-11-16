@@ -18,9 +18,11 @@ final class ForkKeys {
             {4062, R.string.fork_key_netflix},
             {4099, R.string.fork_key_prime},
             {190, R.string.fork_key_youtube},
-            {4020, R.string.fork_key_tcl_channel},
             {4001, R.string.fork_key_live_tv},
     };
+
+    /** TCL Channel: voice search, from any app (InputKeyService) and on Home. Not offered in settings. */
+    static final int VOICE_KEY = 4020;
 
     /** "input:<id>" for the TV's hardware tuner (Live TV), or null when the TV has none. */
     static String tunerTarget(Context ctx) {
@@ -39,7 +41,7 @@ final class ForkKeys {
     }
 
     static String target(Context ctx, int keyCode) {
-        if (keyCode <= 0) return null;
+        if (keyCode <= 0 || keyCode == VOICE_KEY) return null;   // an older choice for TCL Channel no longer counts
         SharedPreferences p = InfoWidgets.prefs(ctx);
         String v = p.getString(PREFIX + keyCode, null);
         return v == null || v.isEmpty() ? null : v;

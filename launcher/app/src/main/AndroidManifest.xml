@@ -107,10 +107,11 @@
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
-        <!-- Voice search over Home (top-bar microphone, or Right held on Home). -->
+        <!-- Voice search choices, and TCL Channel pressed in another app. -->
         <activity
             android:name=".VoiceSearchActivity"
             android:exported="false"
+            android:launchMode="singleTop"
             android:excludeFromRecents="true"
             android:windowSoftInputMode="stateAlwaysHidden|adjustPan"
             android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
