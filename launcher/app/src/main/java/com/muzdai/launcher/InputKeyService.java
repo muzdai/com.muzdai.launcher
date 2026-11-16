@@ -296,7 +296,7 @@ public class InputKeyService extends AccessibilityService {
 
     /**
      * The track result whose title is in the query, the longest such title when several are ("Wish You Were Here"
-     * over a track of the album of that name); the first track when none is. The title is the text next to the
+     * over a track of the album of that name), the higher one on a tie; the first track when none is. The title is the text next to the
      * card's "Track • Artist • Album" label.
      */
     private static AccessibilityNodeInfo bestTrack(AccessibilityNodeInfo root, String query) {
@@ -306,9 +306,12 @@ public class InputKeyService extends AccessibilityService {
         int bestLength = -1;
         for (AccessibilityNodeInfo label : labels) {
             String title = siblingTitle(label);
-            if (title != null && titleInQuery(title, query) && title.length() > bestLength) {
+            if (title == null || !titleInQuery(title, query)) continue;
+            // Without a "(Live …)" tail: the studio "Time" and a live "Time" tie, and Qobuz's order decides.
+            int length = squash(title.replaceAll("\\s*[(\\[].*$", "")).length();
+            if (length > bestLength) {
                 best = label;
-                bestLength = title.length();
+                bestLength = length;
             }
         }
         return best != null ? best : labels.isEmpty() ? null : labels.get(0);
