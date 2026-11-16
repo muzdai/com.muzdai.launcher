@@ -76,7 +76,7 @@ final class InfoWidgets {
     static final String KEY_NEWS_TOPIC = "news_topic";
     private static final String KEY_NEWS_FOR = "news_for";
     /** Part of what the cached headlines are for: a new source (the Ukrainian edition, filtered) refetches them. */
-    private static final String NEWS_SOURCE = "|ua-filtered";
+    private static final String NEWS_SOURCE = "|ua-filtered-2";
 
     static String newsTopic(Context ctx) {
         String t = prefs(ctx).getString(KEY_NEWS_TOPIC, "WORLD");
