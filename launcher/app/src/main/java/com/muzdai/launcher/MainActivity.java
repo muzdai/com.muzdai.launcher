@@ -2582,6 +2582,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * listens the same way, a beep and the lit voice button, no window.
      */
     static void voiceKey(android.content.Context ctx) {
+        // What "close" closes: the app on screen when the key was pressed (Home may come forward over it).
+        String onScreen = InputKeyService.frontPackage();
+        frontWhenAsked = onScreen == null || onScreen.equals(ctx.getPackageName()) ? null : onScreen;
         if (inFront != null && !inFront.isFinishing()) {
             inFront.openVoiceSearch();
             return;
@@ -2596,6 +2599,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         } catch (ActivityNotFoundException ignored) {
         }
     }
+
+    /** The app in front when TCL Channel was pressed, for "close"; null when it was Home. */
+    private static String frontWhenAsked;
 
     /** Set by an EXTRA_LISTEN start; onResume listens once Home is on screen. */
     private boolean listenOnResume;
@@ -2635,7 +2641,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // The AI reads the words off the main thread; the button stays lit meanwhile.
             btnVoice.setActivated(true);
             VoiceActions actions = new VoiceActions(MainActivity.this);
+            String front = frontWhenAsked;
+            frontWhenAsked = null;
+            Context app = getApplicationContext();
             new Thread(() -> {
+                // A player playing behind Home (minimised) is where the request goes when it names no app.
+                actions.inApp(MediaListener.playingApp(app)).front(front);
                 VoiceActions.Plan p = actions.planWithAi(text);
                 runOnUiThread(() -> {
                     if (voice == null || !voice.listening()) btnVoice.setActivated(false);
@@ -2644,6 +2655,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         open(p.intent);
                     } else if (p.kind == VoiceActions.Plan.Kind.PLAY) {
                         VoiceRun.play(MainActivity.this, p.card);
+                    } else if (p.kind == VoiceActions.Plan.Kind.CLOSE) {
+                        VoiceRun.close(MainActivity.this, p.pkg);
                     } else {
                         // A choice to make: where to search, or an app that is not installed.
                         startActivity(new Intent(MainActivity.this, VoiceSearchActivity.class)

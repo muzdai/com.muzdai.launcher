@@ -43,7 +43,7 @@ final class VoiceActions {
 
     /** The outcome of a request. */
     static final class Plan {
-        enum Kind { START, PLAY, CARDS, CHOICES, MISSING }
+        enum Kind { START, PLAY, CARDS, CHOICES, MISSING, CLOSE }
 
         final Kind kind;
         /** START: what to start. */
@@ -54,7 +54,10 @@ final class VoiceActions {
         List<ContentSearch.Card> cards;
         /** CHOICES: what to look for, and a short phrase that may be an app the TV lacks (or null). */
         final String query, maybeApp;
-        /** MISSING: the package (null when it has no Play Store listing) and the name to show. */
+        /**
+         * MISSING: the package (null when it has no Play Store listing) and the name to show. CLOSE: the app to close
+         * (null: nothing to close).
+         */
         final String pkg, name;
 
         static Plan of(Kind kind, Intent intent, String query, String maybeApp, String pkg, String name) {
@@ -81,6 +84,42 @@ final class VoiceActions {
     VoiceActions inApp(String pkg) {
         activeApp = installed(pkg) ? pkg : null;
         return this;
+    }
+
+    /** The app that was in front when the request was spoken (not this launcher): what "close" closes. */
+    private String frontApp;
+
+    VoiceActions front(String pkg) {
+        frontApp = pkg != null && !pkg.equals(ctx.getPackageName()) && installed(pkg) ? pkg : null;
+        return this;
+    }
+
+    /** "Close" closes the named app, else the app that was in front, else the player playing; never this launcher. */
+    Plan close(String named) {
+        String pkg = installed(named) ? named : frontApp != null ? frontApp : activeApp;
+        if (pkg != null && pkg.equals(ctx.getPackageName())) pkg = null;
+        return new Plan(Plan.Kind.CLOSE, null, null, null, pkg, null);
+    }
+
+    /** Words that only say "the app" in "закрой плеер", "закрой активное окно". */
+    private static final java.util.Set<String> THE_APP = new java.util.HashSet<>(java.util.Arrays.asList(
+            "плеер", "плеера", "окно", "приложение", "программу", "активное", "активный", "текущее", "текущий", "это",
+            "эту", "этот", "его", "всё", "все", "music", "player"));
+
+    /** "закрой …" by the plain rules: the app's name after the verb, or null for the app in front or playing. */
+    static String closeTarget(String text) {
+        String t = text.trim().toLowerCase(java.util.Locale.ROOT);
+        for (String verb : new String[]{"закрой", "закрыть", "заверши", "завершить", "выйди из", "выйти из"}) {
+            if (t.equals(verb)) return "";
+            if (t.startsWith(verb + " ")) {
+                StringBuilder rest = new StringBuilder();
+                for (String w : t.substring(verb.length()).trim().split("\\s+")) {
+                    if (!THE_APP.contains(w)) rest.append(rest.length() > 0 ? " " : "").append(w);
+                }
+                return rest.toString();
+            }
+        }
+        return null;
     }
 
     static boolean isPlayer(String pkg) {
@@ -126,6 +165,8 @@ final class VoiceActions {
                 if (String.valueOf(e.getMessage()).contains("404")) p.edit().remove(VoiceAi.KEY_MODEL).apply();
             }
         }
+        String closing = closeTarget(text);
+        if (closing != null) return close(closing.isEmpty() ? null : AppNames.find(closing, labels));
         Plan rules = plan(text);
         if (activeApp != null && rules.kind == Plan.Kind.CHOICES && rules.maybeApp == null) {
             // No app named over a player: that player's search.
@@ -147,6 +188,8 @@ final class VoiceActions {
     Plan fromAnswer(VoiceAi.Answer a, String spoken) {
         String q = a.query.isEmpty() ? spoken : a.query;
         switch (a.action) {
+            case "close":
+                return close(a.app);
             case "tv":
                 return installed(TV_APP) ? start(tvIntent(q)) : new Plan(Plan.Kind.CHOICES, null, q, null, null, null);
             case "open":

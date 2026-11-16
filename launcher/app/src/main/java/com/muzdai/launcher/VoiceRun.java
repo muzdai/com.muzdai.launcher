@@ -48,6 +48,38 @@ final class VoiceRun {
         InputKeyService.press(card.pkg, card.click, WAIT_MS);
     }
 
+    /**
+     * "Close": pauses the app's music, then force-stops it through the TV's own ADB (LocalAdb, as the tile menu's
+     * Close). Never this launcher; null says there is nothing to close.
+     */
+    static void close(Context ctx, String pkg) {
+        Context app = ctx.getApplicationContext();
+        if (pkg == null || pkg.equals(app.getPackageName())) {
+            Toast.makeText(app, R.string.voice_nothing_to_close, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        android.media.session.MediaController playing = MediaListener.playing(app, pkg);
+        if (playing != null) {
+            try {
+                playing.getTransportControls().pause();
+            } catch (RuntimeException ignored) {
+            }
+        }
+        String name = pkg;
+        try {
+            name = String.valueOf(app.getPackageManager().getApplicationLabel(app.getPackageManager().getApplicationInfo(pkg, 0)));
+        } catch (android.content.pm.PackageManager.NameNotFoundException ignored) {
+        }
+        String label = name;
+        Handler main = new Handler(Looper.getMainLooper());
+        new Thread(() -> {
+            LocalAdb.Result r = LocalAdb.forceStop(app, pkg);
+            main.post(() -> Toast.makeText(app, r == LocalAdb.Result.STOPPED
+                    ? app.getString(R.string.fork_tile_closed, label) : app.getString(R.string.voice_close_failed, label),
+                    Toast.LENGTH_SHORT).show());
+        }, "voice-close").start();
+    }
+
     private static boolean isQobuz(ContentSearch.Card card) {
         return card.uri.startsWith("qobuz:");
     }

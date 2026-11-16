@@ -158,7 +158,7 @@ public final class VoiceSearchActivity extends Activity {
         clearResults();
         hint.setText(R.string.voice_thinking);
         new Thread(() -> {
-            VoiceActions.Plan p = actions.planWithAi(text);
+            VoiceActions.Plan p = actions.inApp(MediaListener.playingApp(getApplicationContext())).planWithAi(text);
             runOnUiThread(() -> {
                 if (!isFinishing() && !isDestroyed()) apply(p);
             });
@@ -220,6 +220,10 @@ public final class VoiceSearchActivity extends Activity {
                 return;
             case MISSING:
                 showMissing(p.pkg, p.name);
+                return;
+            case CLOSE:
+                VoiceRun.close(this, p.pkg);
+                finish();
                 return;
             default:
                 showChoices(p.query, p.maybeApp);

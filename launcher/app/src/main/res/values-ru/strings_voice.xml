@@ -41,4 +41,6 @@
     <string name="mini_player_expand">Развернуть на весь экран</string>
     <string name="mini_player_close">Остановить и закрыть</string>
     <string name="media_listener">vPro Launcher: что играет</string>
+    <string name="voice_nothing_to_close">Нечего закрывать</string>
+    <string name="voice_close_failed">Не удалось закрыть %1$s (выключена отладка по сети?)</string>
 </resources>

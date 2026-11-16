@@ -24,6 +24,33 @@ public class MediaListener extends NotificationListenerService {
         return LocalAdb.allowListener(ctx, component(ctx)) && granted(ctx);
     }
 
+    /**
+     * The app playing behind whatever is on screen (a minimised player), or null: the first session in the playing
+     * state, leaving out com.tcl.tv (always "playing" for the Assistant) and this launcher.
+     */
+    static String playingApp(Context ctx) {
+        android.media.session.MediaController c = playing(ctx, null);
+        return c == null ? null : c.getPackageName();
+    }
+
+    /** The playing session, of {@code pkg} only when given; null without access or when nothing plays. */
+    static android.media.session.MediaController playing(Context ctx, String pkg) {
+        android.media.session.MediaSessionManager m = ctx.getSystemService(android.media.session.MediaSessionManager.class);
+        if (m == null) return null;
+        try {
+            for (android.media.session.MediaController c : m.getActiveSessions(component(ctx))) {
+                String p = c.getPackageName();
+                if (VoiceActions.TV_APP.equals(p) || ctx.getPackageName().equals(p)) continue;
+                if (pkg != null && !pkg.equals(p)) continue;
+                android.media.session.PlaybackState s = c.getPlaybackState();
+                if (s != null && s.getState() == android.media.session.PlaybackState.STATE_PLAYING) return c;
+            }
+        } catch (SecurityException e) {
+            // the listener is not allowed (yet)
+        }
+        return null;
+    }
+
     private static boolean granted(Context ctx) {
         if (android.os.Build.VERSION.SDK_INT >= 27) {
             NotificationManager nm = ctx.getSystemService(NotificationManager.class);

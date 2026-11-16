@@ -36,7 +36,7 @@ final class VoiceOverPlayer {
                 Toast.makeText(app, "«" + text + "»", Toast.LENGTH_SHORT).show();
                 String inApp = player;
                 new Thread(() -> {
-                    VoiceActions.Plan p = new VoiceActions(app).inApp(inApp).planWithAi(text);
+                    VoiceActions.Plan p = new VoiceActions(app).inApp(inApp).front(inApp).planWithAi(text);
                     MAIN.post(() -> run(app, text, p));
                 }, "voice-over-player").start();
             }
@@ -55,6 +55,8 @@ final class VoiceOverPlayer {
                 app.startActivity(p.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } else if (p.kind == VoiceActions.Plan.Kind.PLAY) {
                 VoiceRun.play(app, p.card);
+            } else if (p.kind == VoiceActions.Plan.Kind.CLOSE) {
+                VoiceRun.close(app, p.pkg);
             } else {
                 app.startActivity(new Intent(app, VoiceSearchActivity.class)
                         .putExtra(VoiceSearchActivity.EXTRA_QUERY, text)
