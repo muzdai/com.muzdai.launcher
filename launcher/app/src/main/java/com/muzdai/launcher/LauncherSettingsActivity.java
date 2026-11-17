@@ -767,6 +767,9 @@ public final class LauncherSettingsActivity extends Activity {
         List<String[]> options = keyChoices();
         String[] labels = new String[options.size()];
         for (int i = 0; i < labels.length; i++) labels[i] = options.get(i)[0];
+        p.add(toggle(getString(R.string.fork_double_home), getString(R.string.fork_double_home_desc),
+                () -> ForkKeys.doubleHome(this),
+                on -> InfoWidgets.prefs(this).edit().putBoolean(ForkKeys.KEY_DOUBLE_HOME, on).apply()));
         for (int[] button : ForkKeys.BUTTONS) {
             if (button[0] <= 0) continue;
             final int code = button[0];

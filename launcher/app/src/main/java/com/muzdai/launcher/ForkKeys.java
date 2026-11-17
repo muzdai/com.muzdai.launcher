@@ -38,6 +38,13 @@ final class ForkKeys {
         return best == null ? null : "input:" + best;
     }
 
+    /** Home pressed twice quickly opens Running apps (Launcher settings → Remote buttons); on unless switched off. */
+    static final String KEY_DOUBLE_HOME = "double_home_running_apps";
+
+    static boolean doubleHome(Context ctx) {
+        return InfoWidgets.prefs(ctx).getBoolean(KEY_DOUBLE_HOME, true);
+    }
+
     static String target(Context ctx, int keyCode) {
         if (keyCode <= 0) return null;
         SharedPreferences p = InfoWidgets.prefs(ctx);

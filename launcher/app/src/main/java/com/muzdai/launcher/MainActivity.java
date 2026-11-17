@@ -748,6 +748,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
+        // Home twice in a row, quickly: Running apps. The first press has already done its usual work (Home in front,
+        // first tile), so a single Home is not delayed.
+        long now = android.os.SystemClock.uptimeMillis();
+        if (now - lastHomeIntent < DOUBLE_HOME_MS && ForkKeys.doubleHome(this)) {
+            lastHomeIntent = 0;
+            try {
+                startActivity(new Intent(this, RunningAppsActivity.class));
+            } catch (ActivityNotFoundException ignored) {
+            }
+            return;
+        }
+        lastHomeIntent = now;
         grid.scrollToPosition(0);
         lastFocused = 0;
         lastFocusedKey = adapter.getItemCount() > 0 ? adapter.keyAt(0) : null;
@@ -2602,6 +2614,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** The app in front when voice search was started, for "close"; null when it was Home. */
     private static String frontWhenAsked;
+
+    /** When the last Home intent came, for Home twice (ForkKeys.doubleHome). */
+    private long lastHomeIntent;
+    private static final long DOUBLE_HOME_MS = 600;
 
     /** Set by an EXTRA_LISTEN start; onResume listens once Home is on screen. */
     private boolean listenOnResume;
