@@ -43,4 +43,8 @@
     <string name="media_listener">vPro Launcher: что играет</string>
     <string name="voice_nothing_to_close">Нечего закрывать</string>
     <string name="voice_close_failed">Не удалось закрыть %1$s (выключена отладка по сети?)</string>
+    <string name="s_voice_mic">Кнопка микрофона на пульте</string>
+    <string name="s_voice_mic_on">Микрофон открывает голосовой поиск лаунчера</string>
+    <string name="s_voice_mic_desc">Кнопка микрофона на пульте запускает голосовой поиск лаунчера вместо Google Ассистента (лаунчер становится цифровым помощником ТВ). Выключено — снова Google Ассистент. Нужна отладка по сети, как для «Закрыть» в меню плитки.</string>
+    <string name="s_voice_mic_failed">Не удалось сменить помощника: включена ли отладка по сети и разрешён ли лаунчер?</string>
 </resources>

@@ -788,6 +788,15 @@ public final class LauncherSettingsActivity extends Activity {
     private Page voicePage() {
         Page p = new Page(getString(R.string.voice_search));
         SharedPreferences v = VoiceAi.prefs(this);
+        p.add(header(R.string.s_voice_mic));
+        p.add(toggle(getString(R.string.s_voice_mic_on), getString(R.string.s_voice_mic_desc), this::holdsAssistant,
+                on -> new Thread(() -> {
+                    boolean ok = LocalAdb.setAssistant(getApplicationContext(), on);
+                    runOnUiThread(() -> {
+                        if (!ok) Toast.makeText(this, R.string.s_voice_mic_failed, Toast.LENGTH_LONG).show();
+                        refresh();
+                    });
+                }, "assistant-role").start()));
         p.add(header(R.string.s_voice_ai));
         p.add(toggle(getString(R.string.s_voice_ai_on), getString(R.string.s_voice_ai_desc),
                 () -> v.getBoolean(VoiceAi.KEY_ON, true), on -> v.edit().putBoolean(VoiceAi.KEY_ON, on).apply()));
@@ -813,6 +822,13 @@ public final class LauncherSettingsActivity extends Activity {
                 () -> music.indexOf(actions.musicApp()),
                 i -> v.edit().putString(VoiceActions.KEY_MUSIC, music.get(i)).apply()));
         return p;
+    }
+
+    /** This launcher holds the assistant role, so the remote's microphone button comes here (VoiceAssistActivity). */
+    private boolean holdsAssistant() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return false;
+        android.app.role.RoleManager roles = getSystemService(android.app.role.RoleManager.class);
+        return roles != null && roles.isRoleHeld(android.app.role.RoleManager.ROLE_ASSISTANT);
     }
 
     private void showAiKeyInput() {

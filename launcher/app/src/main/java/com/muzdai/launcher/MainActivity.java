@@ -2584,16 +2584,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * listens the same way, a beep and the lit voice button, no window.
      */
     static void voiceKey(android.content.Context ctx) {
+        voiceKey(ctx, InputKeyService.frontPackage());
+    }
+
+    /** onScreen: the app in front when the key (or the remote's mic, VoiceAssistActivity) was pressed. */
+    static void voiceKey(android.content.Context ctx, String onScreen) {
         // What "close" closes: the app on screen when the key was pressed (Home may come forward over it).
-        String onScreen = InputKeyService.frontPackage();
         frontWhenAsked = onScreen == null || onScreen.equals(ctx.getPackageName()) ? null : onScreen;
         if (inFront != null && !inFront.isFinishing()) {
             inFront.openVoiceSearch();
             return;
         }
         // Over a player the player stays: listening in the background, the result looked up in it.
-        String front = InputKeyService.frontPackage();
-        if (VoiceActions.isPlayer(front) && VoiceOverPlayer.listen(ctx, front)) return;
+        if (VoiceActions.isPlayer(onScreen) && VoiceOverPlayer.listen(ctx, onScreen)) return;
         try {
             ctx.startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
                     .setClass(ctx, MainActivity.class).putExtra(EXTRA_LISTEN, true)

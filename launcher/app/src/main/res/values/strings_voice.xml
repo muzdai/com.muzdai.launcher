@@ -44,4 +44,8 @@
     <string name="media_listener">vPro Launcher: now playing</string>
     <string name="voice_nothing_to_close">Nothing to close</string>
     <string name="voice_close_failed">Could not close %1$s (network debugging is off?)</string>
+    <string name="s_voice_mic">Remote microphone button</string>
+    <string name="s_voice_mic_on">Microphone opens this voice search</string>
+    <string name="s_voice_mic_desc">The remote\'s microphone button starts the launcher\'s voice search instead of Google Assistant (the launcher becomes the TV\'s digital assistant). Off: Google Assistant again. Needs network debugging, as Close in the tile menu.</string>
+    <string name="s_voice_mic_failed">Could not change the assistant: is network debugging on and this launcher allowed?</string>
 </resources>

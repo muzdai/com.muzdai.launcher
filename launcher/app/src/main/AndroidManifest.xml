@@ -108,6 +108,20 @@
             android:noHistory="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
         <!-- Voice search choices, and TCL Channel pressed in another app. -->
+        <!-- The remote's microphone button while this launcher holds the assistant role (Launcher settings → Voice
+             search): no window, it starts the voice search and finishes. -->
+        <activity
+            android:name=".VoiceAssistActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".VoiceSearchActivity"
             android:exported="false"

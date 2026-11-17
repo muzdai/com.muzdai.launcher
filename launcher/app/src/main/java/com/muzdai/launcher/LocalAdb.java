@@ -36,8 +36,8 @@ import javax.crypto.Cipher;
  * prompt. It only works while USB/network debugging stays on.
  *
  * The key pair lives in the launcher's private files (adbkey, adbkey.pub). Only "am force-stop" and "pidof" for a
- * package name, "pm uninstall" of one, and "cmd notification allow_listener" for the launcher's own MediaListener are
- * ever sent.
+ * package name, "pm uninstall" of one, "cmd notification allow_listener" for the launcher's own MediaListener, and
+ * "cmd role add-role-holder android.app.role.ASSISTANT" for this launcher or Google's assistant are ever sent.
  */
 final class LocalAdb {
     private static final String TAG = "LocalAdb";
@@ -86,6 +86,21 @@ final class LocalAdb {
         if (!c.matches("[A-Za-z0-9_./]+")) return false;
         return exec(ctx, "cmd notification allow_listener " + c + " && echo ok",
                 output -> output.contains("ok") ? Result.STOPPED : Result.FAILED) == Result.STOPPED;
+    }
+
+    /** Google's assistant on Google TV, the holder of the role before this launcher took it. */
+    static final String GOOGLE_ASSISTANT = "com.google.android.katniss";
+
+    /**
+     * Gives the assistant role, which receives the remote's microphone button, to this launcher (true) or back to
+     * Google's assistant. Blocking.
+     */
+    static boolean setAssistant(Context ctx, boolean launcher) {
+        String pkg = launcher ? ctx.getPackageName() : GOOGLE_ASSISTANT;
+        if (!pkg.matches("[A-Za-z0-9_.]+")) return false;
+        return exec(ctx, "cmd role add-role-holder android.app.role.ASSISTANT " + pkg
+                        + " && cmd role get-role-holders android.app.role.ASSISTANT",
+                output -> output.contains(pkg) ? Result.STOPPED : Result.FAILED) == Result.STOPPED;
     }
 
     private static Result exec(Context ctx, String command, java.util.function.Function<String, Result> judge) {
