@@ -48,4 +48,5 @@
     <string name="s_voice_mic_on">Microphone opens this voice search</string>
     <string name="s_voice_mic_desc">The remote\'s microphone button starts the launcher\'s voice search instead of Google Assistant (the launcher becomes the TV\'s digital assistant). Off: Google Assistant again. Needs network debugging, as Close in the tile menu.</string>
     <string name="s_voice_mic_failed">Could not change the assistant: is network debugging on and this launcher allowed?</string>
+    <string name="voice_cancelled">Voice search cancelled</string>
 </resources>

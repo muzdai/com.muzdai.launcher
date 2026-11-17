@@ -16,6 +16,22 @@ final class VoiceOverPlayer {
     private VoiceOverPlayer() { }
 
     private static VoiceInput voice;
+    /** Counts heard requests, so Back can drop the one the AI is still reading. */
+    private static int request;
+    private static boolean thinking;
+
+    /** Listening, or the AI still reading what was heard: Back cancels (InputKeyService). */
+    static boolean busy() {
+        return (voice != null && voice.listening()) || thinking;
+    }
+
+    /** Back over the player: stop listening, or forget the request being read. */
+    static void cancel(Context ctx) {
+        request++;
+        thinking = false;
+        if (voice != null) voice.cancel();
+        Toast.makeText(ctx.getApplicationContext(), R.string.voice_cancelled, Toast.LENGTH_SHORT).show();
+    }
     private static String player;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
@@ -35,9 +51,15 @@ final class VoiceOverPlayer {
             public void onResult(String text) {
                 Toast.makeText(app, "«" + text + "»", Toast.LENGTH_SHORT).show();
                 String inApp = player;
+                int mine = ++request;
+                thinking = true;
                 new Thread(() -> {
                     VoiceActions.Plan p = new VoiceActions(app).inApp(inApp).front(inApp).planWithAi(text);
-                    MAIN.post(() -> run(app, text, p));
+                    MAIN.post(() -> {
+                        if (mine != request) return;   // cancelled with Back, or a newer request
+                        thinking = false;
+                        run(app, text, p);
+                    });
                 }, "voice-over-player").start();
             }
 

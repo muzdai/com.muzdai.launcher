@@ -60,6 +60,11 @@ public class InputKeyService extends AccessibilityService {
 
     @Override
     protected boolean onKeyEvent(KeyEvent event) {
+        // Back while voice search listens over a player: cancel it instead of going back in the player.
+        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && VoiceOverPlayer.busy()) {
+            if (event.getAction() == KeyEvent.ACTION_UP) main.post(() -> VoiceOverPlayer.cancel(this));
+            return true;
+        }
         // vPro: the owner's choice for this button in Launcher settings wins over config.xml app_keys.
         String chosen = ForkKeys.target(this, event.getKeyCode());
         if (chosen != null && RemoteKeys.handle(this, event, chosen, null)) return true;

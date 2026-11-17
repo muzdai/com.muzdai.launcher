@@ -1071,6 +1071,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        // Back while voice search listens, or thinks over what it heard: cancel it, nothing else.
+        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && voiceBusy()) {
+            if (event.getAction() == KeyEvent.ACTION_UP) cancelVoice();
+            return true;
+        }
         // Vendor keys (TCL Netflix button, 4062) never reach the key services, only the focused window, so their
         // "hold:" entries run here too or nowhere. Only while resumed: onPause releases Home's holds, and a DOWN
         // taken after that would arm one nothing releases.
@@ -2639,6 +2644,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private VoiceInput voice;
+    /** Counts heard requests, so Back can drop the one the AI is still reading. */
+    private int voiceRequest;
+    private boolean voiceThinking;
+
+    private boolean voiceBusy() {
+        return (voice != null && voice.listening()) || voiceThinking;
+    }
+
+    /**
+     * Back: stops listening (SpeechRecognizer.cancel, which the TV's recognizer answers by closing the microphone,
+     * checked on the TV) or forgets the request the AI is reading.
+     */
+    private void cancelVoice() {
+        voiceRequest++;
+        voiceThinking = false;
+        if (voice != null) voice.cancel();
+        btnVoice.setActivated(false);
+        btnVoice.setScaleX(1f);
+        btnVoice.setScaleY(1f);
+        Toast.makeText(this, R.string.voice_cancelled, Toast.LENGTH_SHORT).show();
+    }
+
     private final VoiceInput.Callback voiceCallback = new VoiceInput.Callback() {
         @Override public void onListening(boolean on) {
             btnVoice.setActivated(on);
@@ -2656,6 +2683,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             Toast.makeText(MainActivity.this, "«" + text + "»", Toast.LENGTH_SHORT).show();
             // The AI reads the words off the main thread; the button stays lit meanwhile.
             btnVoice.setActivated(true);
+            int request = ++voiceRequest;
+            voiceThinking = true;
             VoiceActions actions = new VoiceActions(MainActivity.this);
             String front = frontWhenAsked;
             frontWhenAsked = null;
@@ -2665,6 +2694,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 actions.inApp(MediaListener.playingApp(app)).front(front);
                 VoiceActions.Plan p = actions.planWithAi(text);
                 runOnUiThread(() -> {
+                    if (request != voiceRequest) return;   // cancelled with Back, or a newer request
+                    voiceThinking = false;
                     if (voice == null || !voice.listening()) btnVoice.setActivated(false);
                     if (isFinishing() || isDestroyed()) return;
                     if (p.kind == VoiceActions.Plan.Kind.START) {

@@ -120,20 +120,26 @@ final class VoiceInput {
     private final class Listener implements RecognitionListener {
         @Override public void onReadyForSpeech(Bundle params) { }
         @Override public void onBeginningOfSpeech() { }
-        @Override public void onRmsChanged(float rmsdB) { callback.onLevel(Math.max(0f, Math.min(10f, rmsdB))); }
+        @Override public void onRmsChanged(float rmsdB) {
+            if (listening) callback.onLevel(Math.max(0f, Math.min(10f, rmsdB)));
+        }
         @Override public void onBufferReceived(byte[] buffer) { }
         @Override public void onEndOfSpeech() { }
+        // After cancel() the recognizer may still answer (no match, an error): no longer listening, it is not reported.
         @Override public void onError(int error) {
+            if (!listening) return;
             finish();
             callback.onError(errorText(error), error);
         }
         @Override public void onResults(Bundle results) {
+            if (!listening) return;
             finish();
             String t = first(results);
             if (t == null || t.trim().isEmpty()) callback.onError(R.string.voice_err_nomatch, 0);
             else callback.onResult(t);
         }
         @Override public void onPartialResults(Bundle partial) {
+            if (!listening) return;
             String t = first(partial);
             if (t != null && !t.isEmpty()) callback.onPartial(t);
         }
