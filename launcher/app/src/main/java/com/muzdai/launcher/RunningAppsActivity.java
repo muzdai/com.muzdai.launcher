@@ -114,7 +114,11 @@ public final class RunningAppsActivity extends Activity {
         // "No signal"); when the check doesn't finish, nothing is closable this time.
         Set<String> needed = neededByTv(closable);
         for (Row r : found) if (needed == null || needed.contains(r.pkg)) r.stoppable = false;
-        show(found, found.isEmpty() ? getString(R.string.running_apps_none) : null);
+        // What may not be closed is not listed at all.
+        List<Row> shown = new ArrayList<>();
+        for (Row r : found) if (r.stoppable) shown.add(r);
+        show(shown, needed == null ? getString(R.string.running_apps_no_root)
+                : shown.isEmpty() ? getString(R.string.running_apps_none) : null);
     }
 
     /** Apps with a TV or phone launcher entry: package → name. */
@@ -134,13 +138,16 @@ public final class RunningAppsActivity extends Activity {
         Set<String> keep = new HashSet<>();
         if (pkgs.isEmpty()) return keep;
         StringBuilder list = new StringBuilder();
-        for (String p : pkgs) if (RunningApps.safe(p)) list.append(p).append(' ');
-        String out = Root.run("for p in " + list + "; do d=\"$(dumpsys package $p)\"; "
-                + "if ! printf '%s\\n' \"$d\" | grep -q -F \"Package [$p]\"; then echo \"unknown $p\"; "
-                + "elif printf '%s\\n' \"$d\" | sed -n -r '/requested permissions:/,/(install|runtime) permissions:|User [0-9]+:/p'"
-                + " | grep -q TV_INPUT_HARDWARE || printf '%s\\n' \"$d\" | grep -q -E 'TV_INPUT_BUTTON|CONNECT_INPUT|AddAccessory';"
+        for (String p : pkgs) if (RunningApps.safe(p) && !RunningApps.safeToClose(p)) list.append(p).append(' ');
+        if (list.length() == 0) return keep;
+        // dumpsys is piped straight into grep: a big package (the TV's Settings) does not fit a shell variable passed
+        // to printf ("Argument list too long"). A package the check cannot read is kept.
+        String out = Root.run("for p in " + list + "; do "
+                + "if ! dumpsys package $p | grep -q -F \"Package [$p]\"; then echo \"keep $p\"; "
+                + "elif dumpsys package $p | sed -n -r '/requested permissions:/,/(install|runtime) permissions:|User [0-9]+:/p'"
+                + " | grep -q TV_INPUT_HARDWARE || dumpsys package $p | grep -q -E 'TV_INPUT_BUTTON|CONNECT_INPUT|AddAccessory';"
                 + " then echo \"keep $p\"; else echo \"- $p\"; fi; done; echo checked");
-        if (out == null || !out.contains("checked") || out.contains("unknown ")) return null;
+        if (out == null || !out.contains("checked")) return null;
         Matcher m = Pattern.compile("keep ([\\w.]+)").matcher(out);
         while (m.find()) keep.add(m.group(1));
         return keep;
@@ -156,12 +163,8 @@ public final class RunningAppsActivity extends Activity {
                 message(text);
                 return;
             }
-            boolean anyStoppable = false;
-            for (Row r : found) {
-                addRow(r);
-                anyStoppable |= r.stoppable;
-            }
-            hint.setText(anyStoppable ? R.string.running_apps_hint : R.string.running_apps_hint_open);
+            for (Row r : found) addRow(r);
+            hint.setText(R.string.running_apps_hint);
             hint.setVisibility(View.VISIBLE);
             rows.getChildAt(0).requestFocus();
         });
@@ -183,8 +186,8 @@ public final class RunningAppsActivity extends Activity {
         ImageView icon = row.findViewById(R.id.icon);
         if (r.icon != null) icon.setImageDrawable(r.icon);
         ((TextView) row.findViewById(R.id.title)).setText(r.label);
-        ((TextView) row.findViewById(R.id.status)).setText(!r.stoppable ? R.string.running_apps_protected
-                : r.onScreen ? R.string.running_apps_on_screen : R.string.running_apps_background);
+        ((TextView) row.findViewById(R.id.status)).setText(r.onScreen ? R.string.running_apps_on_screen
+                : R.string.running_apps_background);
         row.setOnClickListener(v -> {
             finish();
             open(r.pkg);

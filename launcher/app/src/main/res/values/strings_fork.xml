@@ -55,10 +55,8 @@
     <string name="running_apps_none">No apps are running</string>
     <string name="running_apps_no_root">No root access. Allow root for vPro Launcher in Magisk.</string>
     <string name="running_apps_hint">OK opens · hold OK to close</string>
-    <string name="running_apps_hint_open">OK opens</string>
     <string name="running_apps_on_screen">open</string>
     <string name="running_apps_background">in background</string>
-    <string name="running_apps_protected">system</string>
     <string name="running_apps_closed">%1$s closed</string>
     <string name="running_apps_not_closed">%1$s is still running</string>
     <string name="fork_double_home">Home twice: running apps</string>

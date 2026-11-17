@@ -87,6 +87,12 @@ public class RunningAppsTest {
         assertFalse(RunningApps.mayStop("com.tcl.factory.view", "com.muzdai.launcher", keep));
         assertFalse(RunningApps.mayStop("com.example.keyboard", "com.muzdai.launcher", keep));
         assertTrue(RunningApps.mayStop("com.spotify.tv.android", "com.muzdai.launcher", keep));
+        assertTrue(RunningApps.mayStop("com.android.tv.settings", "com.muzdai.launcher", keep));
+        assertTrue(RunningApps.mayStop("com.android.vending", "com.muzdai.launcher", keep));
+        assertTrue(RunningApps.mayStop("com.topjohnwu.magisk", "com.muzdai.launcher", keep));
+        assertFalse(RunningApps.mayStop("com.tcl.suspension", "com.muzdai.launcher", keep));
+        assertTrue(RunningApps.safeToClose("com.android.tv.settings"));
+        assertFalse(RunningApps.safeToClose("com.tcl.tv"));
     }
 
     @Test public void onlyPackageNamesAreSafe() {

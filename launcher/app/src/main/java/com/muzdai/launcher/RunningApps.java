@@ -123,14 +123,16 @@ final class RunningApps {
     }
 
     /**
-     * Parts of the TV that are never closed, whatever is in the list: Android, the system UI and settings, TCL's
-     * system services (inputs, remote, keys, picture), Google's assistant, the keyboard and this launcher.
+     * Parts of the TV that are never closed and so never listed: Android, the system UI, TCL's system services (inputs,
+     * remote, keys, picture, the quick panel, which runs as the system), Google's services and assistant, the keyboard
+     * and this launcher. The TV's Settings, Google Play and Magisk may be closed: they start afresh when opened, and
+     * root (magiskd) does not depend on the Magisk app.
      */
     private static final Set<String> PROTECTED = new HashSet<>(Arrays.asList(
-            "android", "com.android.systemui", "com.android.tv.settings", "com.android.settings",
-            "com.android.vending", "com.google.android.gms", "com.google.android.katniss",
+            "android", "com.android.systemui", "com.android.settings",
+            "com.google.android.gms", "com.google.android.katniss",
             "com.google.android.tvrecommendations", "com.google.android.apps.tv.launcherx",
-            "com.google.android.tungsten.setupwraith", "com.topjohnwu.magisk",
+            "com.google.android.tungsten.setupwraith", "com.tcl.suspension",
             "com.tcl.tvinput", "com.tcl.ttvs", "com.tvos", "com.tcl.system.server", "com.tcl.systemserver",
             "com.tcl.tcl_bt_rcu_service", "com.tcl.micmanager", "com.tcl.keyhelp", "com.tcl.settings",
             "com.tcl.common.shortcutmenu", "com.tcl.inputmethod.international", "com.tcl.guard",
@@ -138,6 +140,17 @@ final class RunningApps {
     private static final Pattern CORE = Pattern.compile("com\\.android\\.(providers|server)\\..*|"
             + "com\\.(google\\.)?android\\.(permissioncontroller|packageinstaller|ext\\..*)|"
             + "(.*\\.)?(factory|factorymenu|facmenu|fac)(\\..*)?");
+
+    /**
+     * Confirmed by the owner as safe to close although the TV-input check would keep them: the TV's Settings asks for
+     * TV_INPUT_HARDWARE and holds the input and remote-pairing screens, which Android starts again when needed.
+     */
+    private static final Set<String> SAFE_TO_CLOSE = new HashSet<>(Arrays.asList(
+            "com.android.tv.settings", "com.android.vending", "com.topjohnwu.magisk"));
+
+    static boolean safeToClose(String pkg) {
+        return SAFE_TO_CLOSE.contains(pkg);
+    }
 
     /** Whether Close may force-stop this app (the launcher itself never: InputKeyService would go off for good). */
     static boolean mayStop(String pkg, String self, Set<String> keep) {
