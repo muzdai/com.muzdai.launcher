@@ -985,6 +985,7 @@ public final class LauncherSettingsActivity extends Activity {
         out.add(new String[]{getString(R.string.fork_key_nothing), "ignore"});
         out.add(new String[]{getString(R.string.inputs), RemoteKeys.INPUTS_OVERLAY});
         out.add(new String[]{getString(R.string.voice_search), RemoteKeys.VOICE});
+        out.add(new String[]{getString(R.string.running_apps), RemoteKeys.RUNNING_APPS});
         String tuner = ForkKeys.tunerTarget(this);
         if (tuner != null) out.add(new String[]{getString(R.string.fork_key_live_tv_action), tuner});
         out.add(new String[]{getString(R.string.fork_qs_settings_panel), getPackageName() + "/.QuickSettingsActivity"});

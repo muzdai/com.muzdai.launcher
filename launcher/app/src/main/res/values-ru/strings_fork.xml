@@ -48,4 +48,16 @@
     <string name="fork_news_every">Обновлять новости</string>
     <string name="fork_news_every_minutes">Каждые %1$d мин</string>
     <string name="fork_key_tcl_channel">Кнопка TCL Channel</string>
+    <!-- vPro: Запущенные приложения (RunningAppsActivity) -->
+    <string name="running_apps">Запущенные приложения</string>
+    <string name="running_apps_loading">Загрузка…</string>
+    <string name="running_apps_none">Нет запущенных приложений</string>
+    <string name="running_apps_no_root">Нет root-доступа. Разрешите root для vPro Launcher в Magisk.</string>
+    <string name="running_apps_hint">OK — открыть · удерживайте OK — закрыть</string>
+    <string name="running_apps_hint_open">OK — открыть</string>
+    <string name="running_apps_on_screen">открыто</string>
+    <string name="running_apps_background">в фоне</string>
+    <string name="running_apps_protected">системное</string>
+    <string name="running_apps_closed">%1$s закрыто</string>
+    <string name="running_apps_not_closed">%1$s всё ещё работает</string>
 </resources>

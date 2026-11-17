@@ -48,6 +48,8 @@ final class RemoteKeys {
     static final String VOICE = "voice";
     /** vPro: the Inputs list over the app on screen (InputsOverlayActivity), without going Home. */
     static final String INPUTS_OVERLAY = "inputs_overlay";
+    /** vPro: the open apps over the app on screen (RunningAppsActivity, through root). */
+    static final String RUNNING_APPS = "running_apps";
 
     /** Pre-compiled regex patterns to avoid re-compiling Patterns on every entry during key parsing. */
     private static final Pattern NUMERIC_KEY = Pattern.compile("[0-9]{1,6}");
@@ -373,6 +375,13 @@ final class RemoteKeys {
         }
         if (VOICE.equals(pkg)) {
             MainActivity.voiceKey(ctx);
+            return;
+        }
+        if (RUNNING_APPS.equals(pkg)) {
+            try {
+                ctx.startActivity(new Intent(ctx, RunningAppsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (ActivityNotFoundException ignored) {
+            }
             return;
         }
         if (INPUTS_OVERLAY.equals(pkg)) {

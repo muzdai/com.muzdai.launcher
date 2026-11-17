@@ -49,4 +49,16 @@
     <string name="fork_news_every">Refresh headlines</string>
     <string name="fork_news_every_minutes">Every %1$d min</string>
     <string name="fork_key_tcl_channel">TCL Channel button</string>
+    <!-- vPro: Running apps (RunningAppsActivity) -->
+    <string name="running_apps">Running apps</string>
+    <string name="running_apps_loading">Loading…</string>
+    <string name="running_apps_none">No apps are running</string>
+    <string name="running_apps_no_root">No root access. Allow root for vPro Launcher in Magisk.</string>
+    <string name="running_apps_hint">OK opens · hold OK to close</string>
+    <string name="running_apps_hint_open">OK opens</string>
+    <string name="running_apps_on_screen">open</string>
+    <string name="running_apps_background">in background</string>
+    <string name="running_apps_protected">system</string>
+    <string name="running_apps_closed">%1$s closed</string>
+    <string name="running_apps_not_closed">%1$s is still running</string>
 </resources>
