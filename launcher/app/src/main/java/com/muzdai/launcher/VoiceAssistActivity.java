@@ -9,7 +9,7 @@ import android.os.Bundle;
  * The remote's microphone button, once this launcher holds the assistant role (Launcher settings → Voice search).
  * In Bluetooth mode the Google remote service calls SearchManager.launchAssist, in IR mode the button is
  * KEYCODE_ASSIST: both start the assistant's ACTION_ASSIST activity, this one. No window: it hands over to the same
- * voice search as TCL Channel (MainActivity.voiceKey) with the app that was on screen
+ * voice search as a remote button set to "Voice search" (MainActivity.voiceKey), with the app that was on screen
  * (Intent.EXTRA_ASSIST_PACKAGE), and finishes.
  */
 public class VoiceAssistActivity extends Activity {

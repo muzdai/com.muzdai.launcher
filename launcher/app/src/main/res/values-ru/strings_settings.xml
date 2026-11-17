@@ -26,9 +26,6 @@
     <string name="s_about">О лаунчере</string>
     <string name="s_version">Версия</string>
     <string name="s_package">Пакет</string>
-    <string name="s_system_app">Системное приложение</string>
-    <string name="s_yes">Да</string>
-    <string name="s_no">Нет</string>
     <string name="s_weather">Погода</string>
     <string name="s_show_weather">Показывать погоду</string>
     <string name="s_city">Город</string>

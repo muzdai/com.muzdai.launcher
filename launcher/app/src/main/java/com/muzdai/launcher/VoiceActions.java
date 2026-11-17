@@ -36,7 +36,7 @@ final class VoiceActions {
     static final String[] SEARCH_APPS = {YOUTUBE, ALPAC, EMBY, SPOTIFY, DEEZER, TV_APP};
     /** The music apps offered as the default one in settings, when installed. */
     static final String[] MUSIC_APPS = {YOUTUBE, YOUTUBE_MUSIC, SPOTIFY, DEEZER, QOBUZ};
-    /** Players: TCL Channel over one of these listens in the background and searches in it (VoiceOverPlayer). */
+    /** Players: voice search over one of these listens in the background and searches in it (VoiceOverPlayer). */
     static final String[] PLAYER_APPS = {YOUTUBE, YOUTUBE_MUSIC, SPOTIFY, DEEZER, QOBUZ, EMBY, ALPAC};
     /** Settings (VoiceAi.PREFS): where music goes when no app is named. */
     static final String KEY_MUSIC = "music_app";

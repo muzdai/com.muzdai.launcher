@@ -105,7 +105,7 @@ public final class VoiceSearchActivity extends Activity {
         }
     }
 
-    /** TCL Channel again while the panel is up (singleTop): listen again; words given with it are acted on. */
+    /** Voice search again while the panel is up (singleTop): listen again; words given with it are acted on. */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);

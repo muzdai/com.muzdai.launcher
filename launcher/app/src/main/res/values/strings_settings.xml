@@ -27,9 +27,6 @@
     <string name="s_about">About</string>
     <string name="s_version">Version</string>
     <string name="s_package">Package</string>
-    <string name="s_system_app">System app</string>
-    <string name="s_yes">Yes</string>
-    <string name="s_no">No</string>
     <string name="s_weather">Weather</string>
     <string name="s_show_weather">Show the weather</string>
     <string name="s_city">City</string>

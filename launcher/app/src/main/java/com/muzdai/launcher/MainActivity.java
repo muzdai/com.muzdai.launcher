@@ -1064,11 +1064,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // taken after that would arm one nothing releases.
         if (resumed && event.getKeyCode() >= 1000 && RemoteKeys.handle(this, event, homeAppKeys.get(event.getKeyCode()),
                 homeHoldAppKeys.get(event.getKeyCode()))) return true;
-        // TCL Channel: voice search. InputKeyService normally takes it first (from any app); this is for when it is off.
-        if (event.getKeyCode() == ForkKeys.VOICE_KEY) {
-            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) openVoiceSearch();
-            return true;
-        }
         if (holdOk(event)) return true;
         if (tileMenuEnabled && !reordering && openPopup == null
                 && event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
@@ -2573,14 +2568,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     // ---- voice search ---------------------------------------------------------------------------------
 
-    /** Home while it is in front, for the TCL Channel key in InputKeyService; null otherwise. Main thread only. */
+    /** Home while it is in front, for voice search from the key service or the microphone; null otherwise. */
     private static MainActivity inFront;
 
-    /** Home brought to the front by TCL Channel from another app, to listen there. */
+    /** Home brought to the front by voice search from another app, to listen there. */
     static final String EXTRA_LISTEN = "com.muzdai.launcher.LISTEN";
 
     /**
-     * TCL Channel (InputKeyService): Home in front listens in place. From another app Home comes to the front and
+     * Voice search (the microphone, or a remote button set to it): Home in front listens in place. From another app Home comes to the front and
      * listens the same way, a beep and the lit voice button, no window.
      */
     static void voiceKey(android.content.Context ctx) {
@@ -2605,7 +2600,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     }
 
-    /** The app in front when TCL Channel was pressed, for "close"; null when it was Home. */
+    /** The app in front when voice search was started, for "close"; null when it was Home. */
     private static String frontWhenAsked;
 
     /** Set by an EXTRA_LISTEN start; onResume listens once Home is on screen. */

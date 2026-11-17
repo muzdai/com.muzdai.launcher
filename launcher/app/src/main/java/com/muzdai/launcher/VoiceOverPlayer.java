@@ -8,7 +8,7 @@ import android.os.Looper;
 import android.widget.Toast;
 
 /**
- * TCL Channel over a player (VoiceActions.PLAYER_APPS): the player stays on screen; a beep, listening in the
+ * The microphone (or a voice search button) over a player (VoiceActions.PLAYER_APPS): the player stays on screen; a beep, listening in the
  * background (from the key service's process, no window), and the request played or searched in that player unless
  * it names another app. A choice the request leaves open still needs the voice panel. Main thread only.
  */

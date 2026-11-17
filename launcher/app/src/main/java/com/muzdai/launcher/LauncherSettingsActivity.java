@@ -5,7 +5,6 @@ import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
@@ -937,8 +936,6 @@ public final class LauncherSettingsActivity extends Activity {
         Page p = new Page(getString(R.string.s_about));
         p.add(action(0, getString(R.string.s_version), this::version, null));
         p.add(action(0, getString(R.string.s_package), this::getPackageName, null));
-        boolean system = (getApplicationInfo().flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-        p.add(action(0, getString(R.string.s_system_app), () -> getString(system ? R.string.s_yes : R.string.s_no), null));
         return p;
     }
 
@@ -987,6 +984,7 @@ public final class LauncherSettingsActivity extends Activity {
         out.add(new String[]{getString(R.string.fork_key_default), null});
         out.add(new String[]{getString(R.string.fork_key_nothing), "ignore"});
         out.add(new String[]{getString(R.string.inputs), RemoteKeys.INPUTS_OVERLAY});
+        out.add(new String[]{getString(R.string.voice_search), RemoteKeys.VOICE});
         String tuner = ForkKeys.tunerTarget(this);
         if (tuner != null) out.add(new String[]{getString(R.string.fork_key_live_tv_action), tuner});
         out.add(new String[]{getString(R.string.fork_qs_settings_panel), getPackageName() + "/.QuickSettingsActivity"});

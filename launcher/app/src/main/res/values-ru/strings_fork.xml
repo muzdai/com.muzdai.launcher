@@ -47,4 +47,5 @@
     <string name="fork_key_live_tv_action">Эфир (Live TV)</string>
     <string name="fork_news_every">Обновлять новости</string>
     <string name="fork_news_every_minutes">Каждые %1$d мин</string>
+    <string name="fork_key_tcl_channel">Кнопка TCL Channel</string>
 </resources>
