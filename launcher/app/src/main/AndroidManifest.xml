@@ -64,7 +64,9 @@
         </intent>
     </queries>
 
+    <!-- usesCleartextTraffic: the home server's model (LocalAi) is reached over plain HTTP on the LAN. -->
     <application
+        android:usesCleartextTraffic="true"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:banner="@drawable/banner"

@@ -74,6 +74,20 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- The answer to a question (weather, rates, facts), as the home server's model gave it. -->
+        <TextView
+            android:id="@+id/answer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textColor="#FFFFFFFF"
+            android:textSize="20sp"
+            android:lineSpacingMultiplier="1.15"
+            android:fontFamily="@string/font_regular"
+            android:visibility="gone" />
+
         <!-- Results: rows like the other glass menus, or the "not installed" card. -->
         <LinearLayout
             android:id="@+id/rows"

@@ -38,7 +38,7 @@ public final class VoiceSearchActivity extends Activity {
     static final String EXTRA_PLAN = "plan";
 
     private EditText query;
-    private TextView hint;
+    private TextView hint, answer;
     private ImageView mic;
     private LinearLayout rows, missing;
     private VoiceActions actions;
@@ -54,6 +54,7 @@ public final class VoiceSearchActivity extends Activity {
         if (fork != null) ForkConfig.applyOpacity(findViewById(R.id.panel), fork.menuOpacity);
         query = findViewById(R.id.query);
         hint = findViewById(R.id.hint);
+        answer = findViewById(R.id.answer);
         mic = findViewById(R.id.mic);
         rows = findViewById(R.id.rows);
         missing = findViewById(R.id.missing);
@@ -165,7 +166,7 @@ public final class VoiceSearchActivity extends Activity {
         }, "voice-ai").start();
     }
 
-    /** A CARDS, CHOICES or MISSING plan as extras, for Home to hand over; START and PLAY never need the panel. */
+    /** A CARDS, CHOICES, MISSING or ANSWER plan as extras, for Home to hand over; START and PLAY never need the panel. */
     static Bundle pack(VoiceActions.Plan p) {
         Bundle b = new Bundle();
         b.putString("kind", p.kind.name());
@@ -225,9 +226,21 @@ public final class VoiceSearchActivity extends Activity {
                 VoiceRun.close(this, p.pkg);
                 finish();
                 return;
+            case ANSWER:
+                showAnswer(p.name);
+                return;
             default:
                 showChoices(p.query, p.maybeApp);
         }
+    }
+
+    /** A question's answer on the panel, as text only; the microphone keeps focus for the next question. */
+    private void showAnswer(String text) {
+        clearResults();
+        hint.setText("");
+        answer.setText(text);
+        answer.setVisibility(View.VISIBLE);
+        mic.requestFocus();
     }
 
     /** "Search in …" rows for the installed apps that take a query, and Google Play for what may be an app. */
@@ -395,6 +408,7 @@ public final class VoiceSearchActivity extends Activity {
     }
 
     private void clearResults() {
+        answer.setVisibility(View.GONE);
         rows.removeAllViews();
         rows.setVisibility(View.GONE);
         ((LinearLayout) findViewById(R.id.cardsBox)).removeAllViews();

@@ -541,8 +541,8 @@ public final class LauncherSettingsActivity extends Activity {
         p.add(wallpaperChoice());
         p.add(nav(R.drawable.ic_s_cloud, getString(R.string.s_info), () -> getString(R.string.s_info_summary), this::infoPage));
         p.add(nav(R.drawable.ic_s_remote, getString(R.string.fork_keys_title), () -> getString(R.string.s_keys_summary), this::keysPage));
-        p.add(nav(R.drawable.ic_mic, getString(R.string.voice_search), () -> getString(VoiceAi.enabled(this)
-                ? R.string.s_voice_summary_ai : R.string.s_voice_summary_plain), this::voicePage));
+        p.add(nav(R.drawable.ic_mic, getString(R.string.voice_search), () -> getString(
+                LocalAi.enabled(this) || VoiceAi.enabled(this) ? R.string.s_voice_summary_ai : R.string.s_voice_summary_plain), this::voicePage));
         p.add(nav(R.drawable.ic_s_motion, getString(R.string.s_motion), () -> getString(animations()
                 ? R.string.on : R.string.off), this::motionPage));
         Item reset = nav(R.drawable.ic_s_restore, getString(R.string.s_reset), () -> getString(R.string.s_reset_summary),
@@ -802,6 +802,13 @@ public final class LauncherSettingsActivity extends Activity {
         p.add(header(R.string.s_voice_ai));
         p.add(toggle(getString(R.string.s_voice_ai_on), getString(R.string.s_voice_ai_desc),
                 () -> v.getBoolean(VoiceAi.KEY_ON, true), on -> v.edit().putBoolean(VoiceAi.KEY_ON, on).apply()));
+        p.add(action(0, getString(R.string.s_voice_local), () -> {
+            String u = LocalAi.url(this);
+            return u != null ? u : getString(R.string.s_voice_local_none);
+        }, this::showLocalInput));
+        p.add(action(0, getString(R.string.s_voice_local_check), () -> getString(R.string.s_voice_local_check_desc),
+                this::checkLocal));
+        p.add(header(R.string.s_voice_gemini));
         p.add(action(0, getString(R.string.s_voice_ai_key), () -> getString(VoiceAi.key(this) != null
                 ? R.string.s_voice_ai_key_set : R.string.s_voice_ai_key_none), this::showAiKeyInput));
         p.add(action(0, getString(R.string.s_voice_ai_key_file), () -> getString(R.string.s_voice_ai_key_file_desc), () -> {
@@ -831,6 +838,44 @@ public final class LauncherSettingsActivity extends Activity {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return false;
         android.app.role.RoleManager roles = getSystemService(android.app.role.RoleManager.class);
         return roles != null && roles.isRoleHeld(android.app.role.RoleManager.ROLE_ASSISTANT);
+    }
+
+    /** The home server's address; empty clears it (local-ai.txt is then read again). */
+    private void showLocalInput() {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setHint(R.string.s_voice_local_hint);
+        input.setText(VoiceAi.prefs(this).getString(LocalAi.KEY_URL, ""));
+        FrameLayout box = new FrameLayout(this);
+        box.setPadding(dp(24), dp(8), dp(24), 0);
+        box.addView(input);
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(R.string.s_voice_local)
+                .setView(box)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String u = LocalAi.normalize(input.getText().toString());
+                    VoiceAi.prefs(this).edit().putString(LocalAi.KEY_URL, u == null ? "" : u).apply();
+                    refresh();
+                    if (u != null) checkLocal();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void checkLocal() {
+        String u = LocalAi.url(this);
+        if (u == null) {
+            Toast.makeText(this, R.string.s_voice_local_none, Toast.LENGTH_LONG).show();
+            return;
+        }
+        new Thread(() -> {
+            boolean ok = LocalAi.check(u);
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                Toast.makeText(this, ok ? R.string.s_voice_local_ok : R.string.s_voice_local_failed,
+                        Toast.LENGTH_LONG).show();
+            });
+        }, "local-ai-check").start();
     }
 
     private void showAiKeyInput() {

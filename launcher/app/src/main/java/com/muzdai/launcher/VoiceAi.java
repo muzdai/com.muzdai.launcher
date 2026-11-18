@@ -41,7 +41,7 @@ final class VoiceAi {
 
     /** What the model made of a request. */
     static final class Answer {
-        /** open, play, search or tv. */
+        /** open, play, search, tv, close, or answer (a question; the home server's model only). */
         final String action;
         /** An installed package, or "" when none was named or fits. */
         final String app;
@@ -51,14 +51,25 @@ final class VoiceAi {
         final String name, guess;
         /** music, video, movie, series or other: where to look when no app is named. */
         final String kind;
+        /** For answer (the home server's model only): the reply to show and speak; "" otherwise. */
+        final String reply;
 
         Answer(String action, String app, String query, String name, String guess, String kind) {
+            this(action, app, query, name, guess, kind, "");
+        }
+
+        Answer(String action, String app, String query, String name, String guess, String kind, String reply) {
             this.action = action;
             this.app = app;
             this.query = query;
             this.name = name;
             this.guess = guess;
             this.kind = kind;
+            this.reply = reply;
+        }
+
+        Answer withReply(String reply) {
+            return new Answer(action, app, query, name, guess, kind, reply);
         }
     }
 
@@ -162,9 +173,7 @@ final class VoiceAi {
         try {
             JSONObject o = new JSONObject(text.substring(from, to + 1));
             String action = o.optString("action", "").trim().toLowerCase(java.util.Locale.ROOT);
-            if (!action.equals("open") && !action.equals("play") && !action.equals("search") && !action.equals("tv")) {
-                return null;
-            }
+            if (!java.util.Arrays.asList("open", "play", "search", "tv", "close", "answer").contains(action)) return null;
             String kind = o.optString("kind", "other").trim().toLowerCase(java.util.Locale.ROOT);
             return new Answer(action, o.optString("app", "").trim(), o.optString("query", "").trim(),
                     o.optString("name", "").trim(), o.optString("guess", "").trim(), kind);

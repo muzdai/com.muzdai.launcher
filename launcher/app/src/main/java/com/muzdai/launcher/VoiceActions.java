@@ -43,7 +43,7 @@ final class VoiceActions {
 
     /** The outcome of a request. */
     static final class Plan {
-        enum Kind { START, PLAY, CARDS, CHOICES, MISSING, CLOSE }
+        enum Kind { START, PLAY, CARDS, CHOICES, MISSING, CLOSE, ANSWER }
 
         final Kind kind;
         /** START: what to start. */
@@ -52,11 +52,14 @@ final class VoiceActions {
         ContentSearch.Card card;
         /** CARDS: what was found, grouped by source in order; query holds the words. */
         List<ContentSearch.Card> cards;
-        /** CHOICES: what to look for, and a short phrase that may be an app the TV lacks (or null). */
+        /**
+         * CHOICES: what to look for, and a short phrase that may be an app the TV lacks (or null). ANSWER: query is the
+         * question.
+         */
         final String query, maybeApp;
         /**
          * MISSING: the package (null when it has no Play Store listing) and the name to show. CLOSE: the app to close
-         * (null: nothing to close).
+         * (null: nothing to close). ANSWER: name is the reply to show and speak.
          */
         final String pkg, name;
 
@@ -140,10 +143,28 @@ final class VoiceActions {
     }
 
     /**
-     * The plan for a request, read by the AI when it is on and has a key; the plain rules otherwise, or when the AI
-     * fails (no network, a bad key, no answer in time). Blocking: off the main thread only.
+     * The plan for a request, read by the home server's model when it is set (LocalAi), else or when it fails by Gemini
+     * when it has a key; the plain rules otherwise, or when both fail (no network, a bad key, no answer in time).
+     * Blocking: off the main thread only.
      */
     Plan planWithAi(String text) {
+        if (LocalAi.enabled(ctx)) {
+            try {
+                SharedPreferences w = InfoWidgets.prefs(ctx);
+                boolean placed = w.contains(InfoWidgets.KEY_LAT);
+                VoiceAi.Answer answer = LocalAi.understand(LocalAi.url(ctx), text, labels, musicApp(), activeApp,
+                        w.getString(InfoWidgets.KEY_CITY, ""),
+                        placed ? w.getFloat(InfoWidgets.KEY_LAT, 0) : null,
+                        placed ? w.getFloat(InfoWidgets.KEY_LON, 0) : null,
+                        InfoWidgets.currencies(ctx));
+                android.util.Log.i("VoiceActions", "local: " + answer.action + " app=" + answer.app + " kind="
+                        + answer.kind + " query=" + answer.query);
+                Plan local = fromAnswer(answer, text);
+                if (local != null) return local;
+            } catch (IOException e) {
+                android.util.Log.w("VoiceActions", "local failed: " + e);
+            }
+        }
         if (VoiceAi.enabled(ctx)) {
             SharedPreferences p = VoiceAi.prefs(ctx);
             try {
@@ -191,6 +212,8 @@ final class VoiceActions {
         switch (a.action) {
             case "close":
                 return close(a.app);
+            case "answer":
+                return a.reply.isEmpty() ? null : new Plan(Plan.Kind.ANSWER, null, q, null, null, a.reply);
             case "tv":
                 return installed(TV_APP) ? start(tvIntent(q)) : new Plan(Plan.Kind.CHOICES, null, q, null, null, null);
             case "open":
