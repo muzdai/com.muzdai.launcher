@@ -30,6 +30,8 @@ final class VoiceAi {
 
     static final String PREFS = "voice_ai";
     static final String KEY_KEY = "key", KEY_MODEL = "model", KEY_ON = "on";
+    /** Voice search settings: a question Home already answers gets the owner's retort first (ScreenAnswers). */
+    static final String KEY_SCREEN_RETORT = "screen_retort";
     /** Used until a check picks one from the models the key can reach (models come and go). */
     static final String DEFAULT_MODEL = "gemini-2.5-flash-lite";
     static final String FILE = "gemini-key.txt";

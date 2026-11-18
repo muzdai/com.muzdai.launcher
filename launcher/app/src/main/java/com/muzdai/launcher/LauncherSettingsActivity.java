@@ -799,6 +799,9 @@ public final class LauncherSettingsActivity extends Activity {
                         refresh();
                     });
                 }, "assistant-role").start()));
+        p.add(toggle(getString(R.string.s_voice_screen_retort), getString(R.string.s_voice_screen_retort_desc),
+                () -> v.getBoolean(VoiceAi.KEY_SCREEN_RETORT, true),
+                on -> v.edit().putBoolean(VoiceAi.KEY_SCREEN_RETORT, on).apply()));
         p.add(header(R.string.s_voice_ai));
         p.add(toggle(getString(R.string.s_voice_ai_on), getString(R.string.s_voice_ai_desc),
                 () -> v.getBoolean(VoiceAi.KEY_ON, true), on -> v.edit().putBoolean(VoiceAi.KEY_ON, on).apply()));

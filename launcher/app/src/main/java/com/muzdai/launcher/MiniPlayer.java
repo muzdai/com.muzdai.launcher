@@ -183,6 +183,13 @@ final class MiniPlayer {
         slab.setVisibility(View.GONE);
     }
 
+    /** "Artist — Title" as the slab shows it, or null when nothing plays. */
+    String nowPlaying() {
+        if (!isShown()) return null;
+        String t = text.getText().toString().trim();
+        return t.isEmpty() ? null : t.replaceAll("\\s+—\\s+", " — ");
+    }
+
     boolean isShown() {
         return slab.getVisibility() == View.VISIBLE;
     }

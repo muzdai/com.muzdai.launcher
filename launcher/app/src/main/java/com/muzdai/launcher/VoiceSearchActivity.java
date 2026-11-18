@@ -130,6 +130,7 @@ public final class VoiceSearchActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        MainActivity.answerShowing(false);
         voice.destroy();
     }
 
@@ -157,6 +158,11 @@ public final class VoiceSearchActivity extends Activity {
         hideKeyboard();
         if (text == null || text.trim().isEmpty()) return;
         clearResults();
+        String seen = MainActivity.onScreenAnswer(this, text);
+        if (seen != null) {
+            showAnswer(seen);
+            return;
+        }
         hint.setText(R.string.voice_thinking);
         new Thread(() -> {
             VoiceActions.Plan p = actions.inApp(MediaListener.playingApp(getApplicationContext())).planWithAi(text);
@@ -234,13 +240,61 @@ public final class VoiceSearchActivity extends Activity {
         }
     }
 
-    /** A question's answer on the panel, as text only; the microphone keeps focus for the next question. */
+    /** The answer balloon's smallest size, as the voice panel was with a one-line answer. */
+    private static final int ANSWER_MIN_WIDTH_DP = 760, ANSWER_MIN_HEIGHT_DP = 130;
+
+    /**
+     * A question's answer alone in a balloon (no microphone, no question), centred in Home's free space between the
+     * weather and the dock (MainActivity.answerSpace); the focused app's name above the dock is hidden meanwhile.
+     */
     private void showAnswer(String text) {
         clearResults();
         hint.setText("");
         answer.setText(text);
         answer.setVisibility(View.VISIBLE);
-        mic.requestFocus();
+        asAnswer(true);
+    }
+
+    /** true: the answer balloon; false: back to the panel (asDialog). */
+    private void asAnswer(boolean on) {
+        View panel = findViewById(R.id.panel);
+        float d = getResources().getDisplayMetrics().density;
+        findViewById(R.id.header).setVisibility(on ? View.GONE : View.VISIBLE);
+        LinearLayout.LayoutParams alp = (LinearLayout.LayoutParams) answer.getLayoutParams();
+        alp.topMargin = on ? 0 : Math.round(14 * d);
+        answer.setLayoutParams(alp);
+        answer.setGravity(on ? Gravity.CENTER_VERTICAL : Gravity.START);
+        // An "info" circle at the left, centred by height (a compound drawable is), the answer after a gap.
+        answer.setCompoundDrawablesRelativeWithIntrinsicBounds(on ? R.drawable.answer_info : 0, 0, 0, 0);
+        answer.setCompoundDrawablePadding(on ? Math.round(20 * d) : 0);
+        panel.setMinimumHeight(on ? Math.round(ANSWER_MIN_HEIGHT_DP * d) : 0);
+        answer.setMinimumHeight(on ? Math.round((ANSWER_MIN_HEIGHT_DP - 36) * d) : 0);   // less the panel's padding
+        MainActivity.answerShowing(on);
+        if (!on) return;
+        int[] space = MainActivity.answerSpace();
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) panel.getLayoutParams();
+        lp.width = Math.round(ANSWER_MIN_WIDTH_DP * d);
+        if (space == null) {
+            lp.gravity = Gravity.CENTER;   // Home not laid out: the middle of the screen
+            lp.topMargin = 0;
+            lp.bottomMargin = 0;
+            panel.setLayoutParams(lp);
+            return;
+        }
+        int room = space[1] - space[0];
+        answer.setMaxHeight(Math.max(Math.round(40 * d), room - Math.round(36 * d)));
+        lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        lp.bottomMargin = 0;
+        lp.topMargin = space[0];
+        panel.setLayoutParams(lp);
+        // Centred in the space once the balloon knows its height.
+        panel.post(() -> {
+            FrameLayout.LayoutParams p = (FrameLayout.LayoutParams) panel.getLayoutParams();
+            int[] screen = new int[2];
+            ((View) panel.getParent()).getLocationOnScreen(screen);
+            p.topMargin = space[0] - screen[1] + Math.max(0, (room - panel.getHeight()) / 2);
+            panel.setLayoutParams(p);
+        });
     }
 
     /** "Search in …" rows for the installed apps that take a query, and Google Play for what may be an app. */
@@ -415,6 +469,7 @@ public final class VoiceSearchActivity extends Activity {
         findViewById(R.id.cardsScroll).setVisibility(View.GONE);
         missing.setVisibility(View.GONE);
         asDialog(false);
+        asAnswer(false);
     }
 
     /**
@@ -428,6 +483,7 @@ public final class VoiceSearchActivity extends Activity {
         lp.width = dialog ? ViewGroup.LayoutParams.WRAP_CONTENT : Math.round(760 * d);
         lp.gravity = dialog ? Gravity.CENTER : Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
         lp.bottomMargin = dialog ? 0 : Math.round(48 * d);
+        lp.topMargin = 0;
         panel.setLayoutParams(lp);
         findViewById(R.id.header).setVisibility(dialog ? View.GONE : View.VISIBLE);
     }

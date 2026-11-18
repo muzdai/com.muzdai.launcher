@@ -57,4 +57,6 @@
     <string name="s_voice_mic_desc">The remote\'s microphone button starts the launcher\'s voice search instead of Google Assistant (the launcher becomes the TV\'s digital assistant). Off: Google Assistant again. Needs network debugging, as Close in the tile menu.</string>
     <string name="s_voice_mic_failed">Could not change the assistant: is network debugging on and this launcher allowed?</string>
     <string name="voice_cancelled">Voice search cancelled</string>
+    <string name="s_voice_screen_retort">Scold for what is on screen</string>
+    <string name="s_voice_screen_retort_desc">A question Home already answers (the time, the date, the weather and days shown, the rates, what plays) gets a scolding («Глаза разуй!!!» and the like) and then the answer.</string>
 </resources>

@@ -347,6 +347,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
         glass = findViewById(R.id.glass);
         glass.setStyle(cfg.glassStyle);
+        home = new java.lang.ref.WeakReference<>(this);
         heroName = findViewById(R.id.heroName);
         hero = findViewById(R.id.hero);
         // A group (the name in its frame): without this every fade of the shelf would render it through an
@@ -1531,40 +1532,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     // ---- top shelf -------------------------------------------------------------------------------
 
+    /**
+     * The focused dock app's name used to float above the dock; the owner asked for it to go, so only where the dock
+     * is gets noted (the voice answer is centred between the weather and the dock, answerSpace).
+     */
     private void showHero(int position, float dockTopInRoot) {
-        String label = adapter.labelAt(position);
-        float y = dockTopInRoot - 14 * density - 26 * density - hero.getHeight();
-        boolean changed = !label.contentEquals(heroName.getText());
-        if (!animations) {
-            hero.animate().cancel();
-            heroName.setText(label);
-            hero.setY(y);
-            hero.setTranslationX(0f);
-            hero.setAlpha(1f);
-            heroShown = true;
-            return;
-        }
-        if (!heroShown) {
-            hero.animate().cancel();
-            heroName.setText(label);
-            hero.setY(y);
-            hero.setTranslationX(0f);
-            hero.animate().alpha(1f).setDuration(260).start();
-            heroShown = true;
-        } else if (changed) {
-            if (advancedEffects) hero.animate().cancel();
-            hero.animate().alpha(0f).translationX(-12 * density).setDuration(120).withEndAction(() -> {
-                heroName.setText(label);
-                hero.setY(y);
-                hero.setTranslationX(12 * density);
-                hero.animate().alpha(1f).translationX(0f).setDuration(200).start();
-            }).start();
-        } else {
-            hero.setY(y);
-            // onPause cancels the fade-in, and a second Home during one lands on the same tile, which starts none:
-            // finish it, or the shelf stays dim until focus moves to another app.
-            if (hero.getAlpha() < 1f) hero.animate().alpha(1f).setDuration(260).start();
-        }
+        lastDockTop = dockTopInRoot;
     }
 
     private void hideHero() {
@@ -2587,6 +2560,76 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Home while it is in front, for voice search from the key service or the microphone; null otherwise. */
     private static MainActivity inFront;
+    /** The Home instance, for the voice answer (VoiceSearchActivity) over it. Main thread only. */
+    private static java.lang.ref.WeakReference<MainActivity> home = new java.lang.ref.WeakReference<>(null);
+    /** The dock tiles' top in the root (screen) coordinates, as the shelf name was last placed. */
+    private float lastDockTop = Float.NaN;
+    private boolean answerOnScreen;
+
+    /**
+     * The free space between the weather (or the clock block) and the dock's band, in screen pixels: {top, bottom};
+     * null when Home has not been laid out.
+     */
+    static int[] answerSpace() {
+        MainActivity a = home.get();
+        if (a == null || a.isFinishing() || Float.isNaN(a.lastDockTop)) return null;
+        int top = 0;
+        for (View v : new View[]{a.findViewById(R.id.leftBlock), a.weatherNow, a.weatherDays}) {
+            if (v == null || !v.isShown()) continue;
+            int[] at = new int[2];
+            v.getLocationOnScreen(at);
+            top = Math.max(top, at[1] + v.getHeight());
+        }
+        int bottom = Math.round(a.lastDockTop - 14 * a.density);   // DockDecoration's band starts 14dp above the tiles
+        return bottom - top > 80 * a.density ? new int[]{top, bottom} : null;
+    }
+
+    /**
+     * What Home shows now, for a question it already answers (ScreenAnswers); null when Home is not on screen.
+     * Main thread only: it reads the views.
+     */
+    static ScreenAnswers.Facts screenFacts() {
+        MainActivity a = home.get();
+        if (a == null || a.isFinishing() || !a.started || a.stopped) return null;
+        ScreenAnswers.Facts f = new ScreenAnswers.Facts();
+        f.today = java.time.LocalDate.now();
+        TextView clock = a.findViewById(R.id.clock);
+        if (clock != null && clock.isShown()) {
+            TextView ampm = a.findViewById(R.id.ampm);
+            String suffix = ampm != null && ampm.isShown() && ampm.getText().length() > 0 ? " " + ampm.getText() : "";
+            f.time = clock.getText() + suffix;
+        }
+        View date = a.findViewById(R.id.date);
+        f.dateShown = date != null && date.isShown();
+        android.content.SharedPreferences p = InfoWidgets.prefs(a);
+        if (a.fork != null && InfoWidgets.weatherOn(a, a.fork) && a.weatherNow != null && a.weatherNow.isShown()) {
+            String json = p.getString("weather_json", null);
+            if (json != null) {
+                ScreenAnswers.weatherFrom(f, json, InfoWidgets.range(a), p.getString(InfoWidgets.KEY_CITY, ""));
+            }
+        }
+        if (a.fork != null && InfoWidgets.ratesOn(a, a.fork) && a.ratesView != null && a.ratesView.isShown()) {
+            String json = p.getString("rates_json", null);
+            if (json != null) ScreenAnswers.ratesFrom(f, json, InfoWidgets.currencies(a));
+        }
+        if (a.miniPlayer != null && a.miniPlayer.isShown()) f.playing = a.miniPlayer.nowPlaying();
+        return f;
+    }
+
+    /**
+     * The owner's retort and the answer, when the screen already answers the question and the switch is on
+     * (Launcher settings → Voice search); null otherwise. Main thread only.
+     */
+    static String onScreenAnswer(android.content.Context ctx, String spoken) {
+        if (!VoiceAi.prefs(ctx).getBoolean(VoiceAi.KEY_SCREEN_RETORT, true)) return null;
+        return ScreenAnswers.answer(spoken, screenFacts());
+    }
+
+    /** The voice answer is on screen (VoiceSearchActivity); nothing on Home has to make room for it any more. */
+    static void answerShowing(boolean on) {
+        MainActivity a = home.get();
+        if (a != null) a.answerOnScreen = on;
+    }
 
     /** Home brought to the front by voice search from another app, to listen there. */
     static final String EXTRA_LISTEN = "com.muzdai.launcher.LISTEN";
@@ -2685,6 +2728,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             btnVoice.setActivated(true);
             int request = ++voiceRequest;
             voiceThinking = true;
+            String seen = onScreenAnswer(MainActivity.this, text);
+            if (seen != null) {
+                // Already on screen: no AI needed.
+                voiceThinking = false;
+                if (voice == null || !voice.listening()) btnVoice.setActivated(false);
+                startActivity(new Intent(MainActivity.this, VoiceSearchActivity.class)
+                        .putExtra(VoiceSearchActivity.EXTRA_QUERY, text)
+                        .putExtra(VoiceSearchActivity.EXTRA_PLAN, VoiceSearchActivity.pack(VoiceActions.Plan.of(
+                                VoiceActions.Plan.Kind.ANSWER, null, text, null, null, seen))));
+                return;
+            }
             VoiceActions actions = new VoiceActions(MainActivity.this);
             String front = frontWhenAsked;
             frontWhenAsked = null;
