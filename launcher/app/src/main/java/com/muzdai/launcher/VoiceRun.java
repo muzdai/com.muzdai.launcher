@@ -23,6 +23,15 @@ final class VoiceRun {
 
     static void play(Context ctx, ContentSearch.Card card) {
         Context app = ctx.getApplicationContext();
+        if (isQobuz(card)) {
+            // The Qobuz Bridge module plays by catalogue id; without it, Qobuz's search is typed into and pressed.
+            QobuzBridge.play(app, card.click, ContentSearch.QOBUZ_ALBUM.equals(card.uri), () -> playOnScreen(app, card));
+            return;
+        }
+        playOnScreen(app, card);
+    }
+
+    private static void playOnScreen(Context app, ContentSearch.Card card) {
         Intent link = link(card);
         if (card.launchFirst) {
             Intent launch = app.getPackageManager().getLeanbackLaunchIntentForPackage(card.pkg);
