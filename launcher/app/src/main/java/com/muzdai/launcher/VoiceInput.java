@@ -103,6 +103,9 @@ final class VoiceInput {
                 .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                 .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, ctx.getPackageName());
+        // The recognizer masks swear words with asterisks by default ("кто такой Вова х***" reached the AI as
+        // "Вова х"): the words go through as said.
+        if (android.os.Build.VERSION.SDK_INT >= 33) i.putExtra(RecognizerIntent.EXTRA_MASK_OFFENSIVE_WORDS, false);
         try {
             recognizer.startListening(i);
         } catch (RuntimeException e) {
