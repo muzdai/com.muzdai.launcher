@@ -173,6 +173,13 @@ final class QobuzCatalog {
         return out;
     }
 
+    /** "Come Together (2019 Mix)" playing for the catalogue's "Come Together"; any title when none was given. */
+    static boolean sameTitle(String playing, String wanted) {
+        if (wanted == null || wanted.trim().isEmpty()) return true;
+        return playing.trim().toLowerCase(java.util.Locale.ROOT)
+                .startsWith(wanted.trim().toLowerCase(java.util.Locale.ROOT));
+    }
+
     private static void put(JSONObject o, String k, String v) throws JSONException {
         if (v != null && !v.isEmpty() && !"null".equals(v)) o.put(k, v);
     }

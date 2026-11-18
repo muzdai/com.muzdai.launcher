@@ -32,6 +32,12 @@ public class QobuzCatalogTest {
         assertEquals(5, QobuzCatalog.bestTrack(versions, "Pink Floyd Time live").getLong("id"));
     }
 
+    @Test public void playingTitleMatchesTheCatalogueOne() {
+        org.junit.Assert.assertTrue(QobuzCatalog.sameTitle("Come Together (2019 Mix)", "Come Together"));
+        org.junit.Assert.assertTrue(QobuzCatalog.sameTitle("Time", "Time "));
+        org.junit.Assert.assertFalse(QobuzCatalog.sameTitle("Shine On You Crazy Diamond (Pts. 1-5)", "Time"));
+    }
+
     @Test public void albumTracksInDiscAndTrackOrder() throws Exception {
         JSONArray tracks = new JSONArray()
                 .put(track(12, "B", "X", "w", 2, 1)).put(track(99, "Other", "X", "z", 1, 1))
