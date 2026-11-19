@@ -32,7 +32,8 @@ import java.util.List;
  * Home's mini player: while an app plays music behind Home, a slab above the top bar's round buttons, as tall as they
  * are and spanning the first to the last, with the same round ends. Inside: the round cover (when the track has one), "Artist — Title" as a marquee, and two buttons: back to the app's full screen, and stop and close the
  * app. Sessions come from MediaSessionManager through MediaListener; com.tcl.tv's session (always "playing" for the
- * Assistant) is left out.
+ * Assistant) is left out. With no app playing, Roon's zone (RoonNow) is shown the same way: expand opens Roon's now
+ * playing screen, close pauses Roon and gives the Eversolo back to the TV.
  */
 final class MiniPlayer {
     private final MainActivity act;
@@ -51,6 +52,13 @@ final class MiniPlayer {
     private MediaController current;
     private String artKey;
     private boolean running;
+    /** Roon's last reading, and whether the slab shows Roon now. */
+    private RoonNow.Snapshot roon;
+    private boolean roonShown;
+    private final RoonNow.Listener roonListener = s -> {
+        roon = s;
+        refresh();
+    };
 
     private final MediaSessionManager.OnActiveSessionsChangedListener changed = list -> watch(list);
     private final MediaController.Callback callback = new MediaController.Callback() {
@@ -157,6 +165,7 @@ final class MiniPlayer {
         if (running) return;
         running = true;
         bar.addOnLayoutChangeListener(barMoved);
+        if (RoonApi.configured(act)) RoonNow.listen(act, roonListener);
         new Thread(() -> {
             boolean on = MediaListener.ensureEnabled(act.getApplicationContext());
             main.post(() -> {
@@ -175,6 +184,9 @@ final class MiniPlayer {
     void stop() {
         running = false;
         bar.removeOnLayoutChangeListener(barMoved);
+        RoonNow.unlisten(roonListener);
+        roon = null;
+        roonShown = false;
         if (sessions != null) sessions.removeOnActiveSessionsChangedListener(changed);
         sessions = null;
         for (MediaController c : watched) c.unregisterCallback(callback);
@@ -225,6 +237,19 @@ final class MiniPlayer {
             }
         }
         current = playing;
+        roonShown = playing == null && roon != null && roon.active()
+                && (roon.playing() || RoonHandoff.armed());
+        if (roonShown) {
+            String line = roon.artist.isEmpty() ? roon.title : roon.artist + "  —  " + roon.title;
+            if (!line.contentEquals(text.getText())) text.setText(line);
+            text.setSelected(true);
+            showArtUri(RoonNow.imageUrl(act, roon.imageKey, 160));
+            if (slab.getVisibility() != View.VISIBLE) {
+                slab.setVisibility(View.VISIBLE);
+                place();
+            }
+            return;
+        }
         if (playing == null) {
             if (slab.hasFocus()) {
                 View below = lastButton();
@@ -272,12 +297,22 @@ final class MiniPlayer {
                         MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI);
             }
         }
-        String key = b != null ? "bmp:" + System.identityHashCode(b) : uri != null ? uri : "";
+        if (b == null) {
+            showArtUri(uri);
+            return;
+        }
+        String key = "bmp:" + System.identityHashCode(b);
         if (key.equals(artKey)) return;
         artKey = key;
-        if (b != null) {
-            setArt(b);
-        } else if (uri != null) {
+        setArt(b);
+    }
+
+    /** The round cover from an address, or none. */
+    private void showArtUri(String uri) {
+        String key = uri != null ? uri : "";
+        if (key.equals(artKey)) return;
+        artKey = key;
+        if (uri != null) {
             setArt(null);
             String u = uri;
             new Thread(() -> {
@@ -364,6 +399,10 @@ final class MiniPlayer {
 
     /** The app's own screen, from its session; Qobuz then goes on to its full screen player. */
     private void restore() {
+        if (roonShown) {
+            RoonNowPlayingActivity.open(act);
+            return;
+        }
         MediaController c = current;
         if (c == null) return;
         String pkg = c.getPackageName();
@@ -398,6 +437,18 @@ final class MiniPlayer {
 
     /** Stops the music, then closes the app through the TV's own ADB (as the tile menu's Close does). */
     private void stopAndClose() {
+        if (roonShown) {
+            View below = lastButton();
+            if (below != null) below.requestFocus();
+            roonShown = false;
+            slab.setVisibility(View.GONE);
+            Context app = act.getApplicationContext();
+            new Thread(() -> {
+                RoonHandoff.disarm();
+                RoonHandoff.handBack(app);
+            }, "mini-player-roon").start();
+            return;
+        }
         MediaController c = current;
         if (c == null) return;
         String pkg = c.getPackageName();

@@ -543,6 +543,9 @@ public final class LauncherSettingsActivity extends Activity {
         p.add(nav(R.drawable.ic_s_remote, getString(R.string.fork_keys_title), () -> getString(R.string.s_keys_summary), this::keysPage));
         p.add(nav(R.drawable.ic_mic, getString(R.string.voice_search), () -> getString(
                 LocalAi.enabled(this) || VoiceAi.enabled(this) ? R.string.s_voice_summary_ai : R.string.s_voice_summary_plain), this::voicePage));
+        p.add(nav(R.drawable.ic_s_music, "Roon", () -> RoonApi.configured(this)
+                ? RoonApi.prefs(this).getString(RoonApi.KEY_OUTPUT_NAME, "Roon") : getString(R.string.s_roon_summary_off),
+                this::roonPage));
         p.add(nav(R.drawable.ic_s_motion, getString(R.string.s_motion), () -> getString(animations()
                 ? R.string.on : R.string.off), this::motionPage));
         Item reset = nav(R.drawable.ic_s_restore, getString(R.string.s_reset), () -> getString(R.string.s_reset_summary),
@@ -834,6 +837,126 @@ public final class LauncherSettingsActivity extends Activity {
                 () -> music.indexOf(actions.musicApp()),
                 i -> v.edit().putString(VoiceActions.KEY_MUSIC, music.get(i)).apply()));
         return p;
+    }
+
+    // ---- Roon ---------------------------------------------------------------------------------------------
+
+    /** The last check of the core (shown as the connection's summary) and the players it reported. */
+    private String roonStatus;
+    private String[] roonIds = new String[0], roonNames = new String[0];
+
+    private Page roonPage() {
+        Page p = new Page("Roon");
+        SharedPreferences r = RoonApi.prefs(this);
+        p.add(header(R.string.s_roon_core));
+        p.add(action(0, getString(R.string.s_roon_host), () -> RoonApi.host(this).isEmpty()
+                ? getString(R.string.s_roon_none) : RoonApi.host(this),
+                () -> askAddress(R.string.s_roon_host, R.string.s_roon_host_hint, RoonApi.KEY_HOST, this::checkRoon)));
+        p.add(action(0, getString(R.string.s_roon_status), () -> roonStatus != null ? roonStatus
+                : getString(R.string.s_roon_status_checking), this::checkRoon));
+        p.add(choice(0, getString(R.string.s_roon_player), () -> {
+            if (roonNames.length > 0) return roonNames;
+            String saved = r.getString(RoonApi.KEY_OUTPUT_NAME, "");
+            return new String[]{saved.isEmpty() ? getString(R.string.s_roon_player_none) : saved};
+        }, () -> {
+            String saved = RoonApi.output(this);
+            for (int i = 0; i < roonIds.length; i++) if (roonIds[i].equals(saved)) return i;
+            return roonNames.length > 0 ? -1 : 0;
+        }, i -> {
+            if (i < roonIds.length) {
+                r.edit().putString(RoonApi.KEY_OUTPUT, roonIds[i]).putString(RoonApi.KEY_OUTPUT_NAME, roonNames[i]).apply();
+            }
+        }));
+        p.add(action(0, getString(R.string.s_roon_find), () -> getString(R.string.s_roon_find_desc), this::findRoon));
+        String[] steps = {"0,5", "1", "2"};
+        p.add(choice(0, getString(R.string.s_roon_step), () -> steps,
+                () -> java.util.Arrays.asList(RoonPlay.STEPS).indexOf(r.getString(RoonPlay.KEY_STEP, "1")),
+                i -> r.edit().putString(RoonPlay.KEY_STEP, RoonPlay.STEPS[i]).apply()));
+        p.add(header(R.string.s_roon_eversolo));
+        p.add(toggle(getString(R.string.s_roon_eversolo_on), getString(R.string.s_roon_eversolo_on_desc),
+                () -> r.getBoolean(Eversolo.KEY_ON, true), on -> r.edit().putBoolean(Eversolo.KEY_ON, on).apply()));
+        p.add(action(0, getString(R.string.s_roon_eversolo_host), () -> Eversolo.host(this).isEmpty()
+                ? getString(R.string.s_roon_none) : Eversolo.host(this),
+                () -> askAddress(R.string.s_roon_eversolo_host, R.string.s_roon_eversolo_hint, Eversolo.KEY_HOST, null)));
+        if (roonStatus == null) checkRoon();
+        return p;
+    }
+
+    /** Connects to the core (a first connection waits to be enabled in Roon) and reads its players. */
+    private void checkRoon() {
+        roonStatus = getString(R.string.s_roon_status_checking);
+        new Thread(() -> {
+            String status;
+            String[] ids = roonIds, names = roonNames;
+            if (RoonApi.host(this).isEmpty()) {
+                status = getString(R.string.s_roon_none);
+            } else {
+                try {
+                    RoonApi api = RoonApi.get(this, 3000);
+                    org.json.JSONArray outs = api.outputs();
+                    int n = outs == null ? 0 : outs.length();
+                    ids = new String[n];
+                    names = new String[n];
+                    for (int i = 0; i < n; i++) {
+                        ids[i] = outs.optJSONObject(i).optString("output_id");
+                        names[i] = outs.optJSONObject(i).optString("display_name");
+                    }
+                    status = getString(R.string.s_roon_status_ok, RoonApi.coreName != null ? RoonApi.coreName : "Roon");
+                } catch (RoonApi.NotReady e) {
+                    status = getString(e.notEnabled ? R.string.s_roon_status_enable : R.string.s_roon_status_down);
+                } catch (java.io.IOException e) {
+                    status = getString(R.string.s_roon_status_down);
+                }
+            }
+            String done = status;
+            String[] i2 = ids, n2 = names;
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                roonStatus = done;
+                roonIds = i2;
+                roonNames = n2;
+                refresh();
+            });
+        }, "roon-check").start();
+    }
+
+    /** Looks through the TV's /24 for a Roon Core and an Eversolo, and keeps what it finds. */
+    private void findRoon() {
+        Toast.makeText(this, R.string.s_roon_find_busy, Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            String[] found = RoonFinder.find();
+            SharedPreferences.Editor e = RoonApi.prefs(this).edit();
+            if (found[0] != null) e.putString(RoonApi.KEY_HOST, found[0]);
+            if (found[1] != null) e.putString(Eversolo.KEY_HOST, found[1]);
+            e.apply();
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                String none = getString(R.string.s_roon_none);
+                Toast.makeText(this, getString(R.string.s_roon_find_result, found[0] != null ? found[0] : none,
+                        found[1] != null ? found[1] : none), Toast.LENGTH_LONG).show();
+                checkRoon();
+            });
+        }, "roon-find").start();
+    }
+
+    private void askAddress(int title, int hint, String key, Runnable after) {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setHint(hint);
+        input.setText(RoonApi.prefs(this).getString(key, ""));
+        FrameLayout box = new FrameLayout(this);
+        box.setPadding(dp(24), dp(8), dp(24), 0);
+        box.addView(input);
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(title)
+                .setView(box)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    RoonApi.prefs(this).edit().putString(key, input.getText().toString().trim()).apply();
+                    refresh();
+                    if (after != null) after.run();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     /** This launcher holds the assistant role, so the remote's microphone button comes here (VoiceAssistActivity). */

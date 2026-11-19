@@ -34,8 +34,8 @@ final class VoiceCommand {
     private static final Pattern VERB = Pattern.compile("^(?:пожалуйста\\s+)?"
             + "(включи|включить|запусти|запустить|открой|открыть|поставь|сыграй|играй|проиграй|покажи|найди|найти|ищи|"
             + "поищи|хочу посмотреть|хочу послушать)\\s+(.+)$");
-    /** The last "на / в / во / через <app>" of the rest: "песни битлз на ютубе" → ("песни битлз", "ютубе"). */
-    private static final Pattern IN = Pattern.compile("^(.+)\\s+(?:на|в|во|через)\\s+(.+)$");
+    /** The last "на / в / во / через / по <app>" of the rest: "песни битлз на ютубе" → ("песни битлз", "ютубе"). */
+    private static final Pattern IN = Pattern.compile("^(.+)\\s+(?:на|в|во|через|по)\\s+(.+)$");
     /**
      * Words of a TV programme request, on the normalized text. Plain letter classes, no \\b or \\w: Android's ICU regex
      * rejects the (?U) flag the JVM needs for Cyrillic word boundaries, and VoiceCommand loads on Home.

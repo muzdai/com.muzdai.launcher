@@ -65,6 +65,8 @@ public class InputKeyService extends AccessibilityService {
             if (event.getAction() == KeyEvent.ACTION_UP) main.post(() -> VoiceOverPlayer.cancel(this));
             return true;
         }
+        // Media keys go to Roon while it plays from here and no app on the TV plays (RoonPlay.mediaKey).
+        if (RoonPlay.mediaKey(this, event)) return true;
         // vPro: the owner's choice for this button in Launcher settings wins over config.xml app_keys.
         String chosen = ForkKeys.target(this, event.getKeyCode());
         if (chosen != null && RemoteKeys.handle(this, event, chosen, null)) return true;

@@ -11,8 +11,8 @@ android {
         applicationId providers.gradleProperty('launcherApplicationId').getOrElse('com.muzdai.launcher')
         minSdk 26
         targetSdk 34
-        versionCode 45
-        versionName '1.6.24'
+        versionCode 54
+        versionName '1.7.8'
     }
 
     // Release signing from the environment (GitHub Actions secrets); without it the debug key signs, for local builds.
@@ -55,6 +55,8 @@ android {
 dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
     implementation 'androidx.dynamicanimation:dynamicanimation:1.0.0'
+    // Roon's extension API is a WebSocket (RoonApi).
+    implementation 'org.java-websocket:Java-WebSocket:1.5.7'
     // Test only (never in the APK): plain JVM tests, src/test.
     testImplementation 'junit:junit:4.13.2'
     // The real org.json for the voice AI answer tests: android.jar only has stubs of it.

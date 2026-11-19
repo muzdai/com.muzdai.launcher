@@ -32,10 +32,12 @@ final class VoiceActions {
     static final String EMBY = "tv.emby.embyatv";
     static final String DEEZER = "deezer.android.app";
     static final String QOBUZ = "com.qobuz.music";
+    /** Not an app: the owner's Roon Core, played to by the launcher itself (RoonPlay) once set up in settings. */
+    static final String ROON = "roon";
     /** Where "search in …" rows are offered for a plain search, in this order, when installed. */
     static final String[] SEARCH_APPS = {YOUTUBE, ALPAC, EMBY, SPOTIFY, DEEZER, TV_APP};
     /** The music apps offered as the default one in settings, when installed. */
-    static final String[] MUSIC_APPS = {YOUTUBE, YOUTUBE_MUSIC, SPOTIFY, DEEZER, QOBUZ};
+    static final String[] MUSIC_APPS = {YOUTUBE, YOUTUBE_MUSIC, SPOTIFY, DEEZER, QOBUZ, ROON};
     /** Players: voice search over one of these listens in the background and searches in it (VoiceOverPlayer). */
     static final String[] PLAYER_APPS = {YOUTUBE, YOUTUBE_MUSIC, SPOTIFY, DEEZER, QOBUZ, EMBY, ALPAC};
     /** Settings (VoiceAi.PREFS): where music goes when no app is named. */
@@ -140,6 +142,12 @@ final class VoiceActions {
             if (ri.activityInfo == null || ctx.getPackageName().equals(ri.activityInfo.packageName)) continue;
             labels.put(String.valueOf(ri.loadLabel(pm)), ri.activityInfo.packageName);
         }
+        if (RoonApi.configured(ctx)) labels.put("Roon", ROON);
+    }
+
+    /** What Roon plays: the words, and a kind (track, album, artist, playlist; RoonPlay.RESUME) or "" for any. */
+    static ContentSearch.Card roon(String kind, String q) {
+        return new ContentSearch.Card(ROON, ROON + ":" + (kind == null ? "" : kind), q, "Roon", null, q, false);
     }
 
     /**
@@ -148,6 +156,8 @@ final class VoiceActions {
      * Blocking: off the main thread only.
      */
     Plan planWithAi(String text) {
+        Plan roon = roonCommand(text);
+        if (roon != null) return roon;
         if (LocalAi.enabled(ctx)) {
             try {
                 SharedPreferences w = InfoWidgets.prefs(ctx);
@@ -198,6 +208,30 @@ final class VoiceActions {
         return rules;
     }
 
+    /**
+     * A playback command for Roon ("пауза", "громче", "что играет", "перенеси на кухню"), when it is Roon's: Roon named,
+     * or Roon playing (RoonPlay.wants). Null otherwise: the request goes on as before. Blocking.
+     */
+    private Plan roonCommand(String text) {
+        if (!installed(ROON)) return null;
+        RoonCommands.Cmd c = RoonCommands.parse(text);
+        if (c == null) return null;
+        if (!RoonPlay.wants(ctx, c, ROON.equals(musicApp()), activeApp != null)) {
+            // "Move the music to the kitchen" with no such zone: say so, unless the words name an app.
+            if (c.kind == RoonCommands.Kind.TRANSFER && AppNames.find(c.arg, labels) == null) {
+                return new Plan(Plan.Kind.ANSWER, null, text, null, null, ctx.getString(R.string.roon_no_zone, c.arg));
+            }
+            return null;
+        }
+        android.util.Log.i("VoiceActions", "roon: " + c.kind + (c.arg != null ? " " + c.arg : ""));
+        if (c.kind == RoonCommands.Kind.WHAT_PLAYS || c.kind == RoonCommands.Kind.WHAT_VOLUME) {
+            String a = RoonPlay.answer(ctx, c);
+            android.util.Log.i("VoiceActions", "roon answers: " + a);
+            return a == null ? null : new Plan(Plan.Kind.ANSWER, null, text, null, null, a);
+        }
+        return play(roon(RoonPlay.CMD + c.kind.name(), c.arg == null ? "" : c.arg));
+    }
+
     /** The music app chosen in settings, if still installed; else the first installed of MUSIC_APPS. */
     String musicApp() {
         String chosen = VoiceAi.prefs(ctx).getString(KEY_MUSIC, null);
@@ -217,6 +251,7 @@ final class VoiceActions {
             case "tv":
                 return installed(TV_APP) ? start(tvIntent(q)) : new Plan(Plan.Kind.CHOICES, null, q, null, null, null);
             case "open":
+                if (ROON.equals(a.app) && installed(ROON)) return play(roon(RoonPlay.RESUME, ""));
                 if (installed(a.app)) return start(openIntent(a.app));
                 if (!a.name.isEmpty()) {
                     String notOnPlay = AppNames.notOnPlay(a.name);
@@ -231,6 +266,10 @@ final class VoiceActions {
                     return missing(a.app, AppNames.name(a.app));
                 }
                 String app = installed(a.app) ? a.app : activeApp != null ? activeApp : "";
+                // Roon has no screen here to search in: "find" plays too.
+                if (ROON.equals(app) || app.isEmpty() && isMusic(a.kind) && ROON.equals(musicApp())) {
+                    return play(roon("album".equals(a.kind) ? RoonSearch.ALBUM : "", q));
+                }
                 if ("play".equals(a.action)) {
                     ContentSearch.Card c = first(app, a.kind, q);
                     if (c != null) return play(c);
@@ -271,6 +310,7 @@ final class VoiceActions {
             }
             app = isMusic(kind) ? musicApp() : YOUTUBE;
         }
+        if (ROON.equals(app)) return roon("album".equals(kind) ? RoonSearch.ALBUM : "", q);
         if ("album".equals(kind)) {
             ContentSearch.Card a = album(app, q);
             if (a != null) return a;
@@ -377,10 +417,12 @@ final class VoiceActions {
         switch (c.kind) {
             case OPEN: {
                 String pkg = AppNames.find(c.app, labels);
+                if (ROON.equals(pkg) && installed(ROON)) return play(roon(RoonPlay.RESUME, ""));
                 return installed(pkg) ? start(openIntent(pkg)) : missing(pkg, c.app);
             }
             case IN_APP: {
                 String pkg = AppNames.find(c.app, labels);
+                if (ROON.equals(pkg) && installed(ROON)) return play(roon("", c.query));
                 return installed(pkg) ? start(searchIntent(pkg, c.query)) : missing(pkg, c.app);
             }
             case TV:
@@ -450,6 +492,7 @@ final class VoiceActions {
     boolean installed(String pkg) {
         if (pkg == null) return false;
         if (AppNames.SETTINGS.equals(pkg)) return true;
+        if (ROON.equals(pkg)) return RoonApi.configured(ctx);
         return openIntent(pkg) != null;
     }
 

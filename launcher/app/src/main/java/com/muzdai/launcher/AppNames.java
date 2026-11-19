@@ -33,6 +33,9 @@ final class AppNames {
         known("com.spotify.tv.android", "Spotify", "spotify", "спотифай", "спотифи", "спотифаи");
         known("deezer.android.app", "Deezer", "deezer", "дизер", "дизэр", "диззер");
         known("com.qobuz.music", "Qobuz", "qobuz", "кобуз", "кобус", "куобуз", "кьюбаз");
+        // Roon (RoonPlay) is no app on the TV: the launcher drives the owner's Roon Core.
+        known(VoiceActions.ROON, "Roon", "roon", "рун", "руне", "руну", "роон", "рооне", "роону", "роне", "рун аудио",
+                "роон аудио", "roon audio");
         known("tv.emby.embyatv", "Emby", "emby", "эмби", "эмбай", "эмбу");
         known("cc.alcopa.tv", "ALPAC", "alpac", "алпак", "альпак", "алпака");
         known("ar.tvplayer.tv", "TiviMate", "tivimate", "тивимейт", "тиви мейт", "тивимэйт");

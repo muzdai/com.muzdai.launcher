@@ -23,6 +23,10 @@ final class VoiceRun {
 
     static void play(Context ctx, ContentSearch.Card card) {
         Context app = ctx.getApplicationContext();
+        if (VoiceActions.ROON.equals(card.pkg)) {   // no app: the launcher drives the Roon Core
+            RoonPlay.play(app, card.click, card.uri.substring(VoiceActions.ROON.length() + 1));
+            return;
+        }
         if (isQobuz(card)) {
             // The Qobuz Bridge module plays by catalogue id; without it, Qobuz's search is typed into and pressed.
             QobuzBridge.play(app, card.click, ContentSearch.QOBUZ_ALBUM.equals(card.uri), () -> playOnScreen(app, card));
