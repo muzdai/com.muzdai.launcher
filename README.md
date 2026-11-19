@@ -62,14 +62,12 @@ adb shell settings put secure enabled_accessibility_services com.muzdai.launcher
 adb shell settings put secure accessibility_enabled 1
 ```
 
-## System app (Magisk)
+## Root
 
-`magisk/build-module.sh <signed apk>` builds a Magisk module that installs the launcher into `/system/priv-app`
-with its privileged permission `DELETE_PACKAGES` allowlisted in `system/etc/permissions` (the allowlist still
-lists `WRITE_SECURE_SETTINGS`, which the launcher no longer requests; an unused entry is harmless). Install it with `magisk --install-module` and reboot. Later versions install over it with
-`adb install -r`. Every privileged permission the manifest asks for must be in the allowlist, or a TV with
-`ro.control_privapp_permissions=enforce` will not boot. See `docs/RESTORE.md` for the state of the TV and how to
-roll back.
+The launcher is made for a rooted TV (Magisk): closing apps, uninstalling without a second prompt, the running apps
+panel, the media listener and the assistant role run as root through Magisk's `su`. Grant the launcher root once in
+Magisk. It is an ordinary app: no system or privileged install is needed, and new versions install with
+`adb install -r`.
 
 ## Network use
 

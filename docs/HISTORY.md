@@ -224,9 +224,15 @@
   своё значение), а когда Roon перестаёт играть — возвращается к прежней. Подсказка «Громкость N» внизу.
 - **1.7.22.** Перехват громкости пульта для Roon убран: на практике работал наоборот. Кнопки громкости снова
   только у ТВ, как до 1.7.17.
+- **Без модуля Magisk.** Лаунчер рассчитан на рутованный ТВ и ставится как обычное приложение: модуль
+  `muzdai_launcher` (системная привилегированная установка) больше не собирается и не входит в релиз, папка `magisk/`
+  и `docs/RESTORE.md` удалены. 1.7.23: запрос `DELETE_PACKAGES` и удаление через PackageInstaller убраны (без root —
+  системный экран удаления). Модуль снят с ТВ, после перезагрузки лаунчер остался обычным приложением со всеми
+  данными, root-доступом, службой кнопок, слушателем уведомлений и ролью помощника.
+
 ## Состояние ТВ
 
-TCL 65C8K, Google TV 14, Magisk. Лаунчер — системное привилегированное приложение (модуль `muzdai_launcher`),
-Home = `com.muzdai.launcher/.MainActivity`, служба кнопок `com.muzdai.launcher/.InputKeyService` включена,
+TCL 65C8K, Google TV 14, Magisk (модули `tcltv_hide_stock`, `zygisk_vector`). Лаунчер — обычное приложение с
+root-доступом в Magisk (uid 10148), Home = `com.muzdai.launcher/.MainActivity`, служба кнопок `com.muzdai.launcher/.InputKeyService` включена,
 `com.google.android.tungsten.setupwraith` отключён, стоковый `launcherx` удалён для user 0. Обои: 149 картинок в
-`/sdcard/Android/data/com.muzdai.launcher/files/wallpapers/`. Подробности и откат — в `RESTORE.md`.
+`/sdcard/Android/data/com.muzdai.launcher/files/wallpapers/`.

@@ -1,6 +1,0 @@
-id=muzdai_launcher
-name=vPro TV Launcher (системный)
-version=1.3.0
-versionCode=19
-author=muzdai
-description=Делает лаунчер com.muzdai.launcher привилегированным системным приложением (DELETE_PACKAGES, WRITE_SECURE_SETTINGS).

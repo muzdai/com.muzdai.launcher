@@ -59,24 +59,14 @@ jobs:
           ( cd "$RUNNER_TEMP" && sha256sum "$APK" > "$APK.sha256" )
           echo "apk=$RUNNER_TEMP/$APK" >> "$GITHUB_OUTPUT"
 
-      - name: Magisk module
-        id: m
-        run: |
-          ZIP="$RUNNER_TEMP/vpro-tv-launcher-${{ steps.v.outputs.name }}-magisk.zip"
-          PATH="$ANDROID_HOME/build-tools/34.0.0:$PATH" MODULE_VERSION="${{ steps.v.outputs.name }}" \
-            MODULE_VERSION_CODE="${{ steps.v.outputs.code }}" sh ../magisk/build-module.sh "${{ steps.v.outputs.apk }}" "$ZIP"
-          ( cd "$RUNNER_TEMP" && sha256sum "$(basename "$ZIP")" > "$(basename "$ZIP").sha256" )
-          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
-
       - name: GitHub release
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" "${{ steps.v.outputs.apk }}" "${{ steps.v.outputs.apk }}.sha256" \
-            "${{ steps.m.outputs.zip }}" "${{ steps.m.outputs.zip }}.sha256" \
             --title "vPro TV Launcher ${{ steps.v.outputs.name }}" \
-            --notes "versionName ${{ steps.v.outputs.name }}, versionCode ${{ steps.v.outputs.code }}. Signed with the release key. The -magisk.zip is the Magisk module that makes the launcher a privileged system app (install once with magisk --install-module, then reboot; see docs/RESTORE.md)."
+            --notes "versionName ${{ steps.v.outputs.name }}, versionCode ${{ steps.v.outputs.code }}. Signed with the release key."
 
       - name: Build artifact
         if: github.ref_type != 'tag'

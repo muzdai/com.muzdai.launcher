@@ -17,10 +17,7 @@
          FINE" rule does not apply here. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
         tools:ignore="CoarseFineLocation" />
-    <!-- Uninstall from the App library. DELETE_PACKAGES is privileged: the launcher gets it as a system app
-         (privapp-permissions-com.muzdai.launcher.xml); a plain install falls back to the system's uninstall screen. -->
-    <uses-permission android:name="android.permission.DELETE_PACKAGES"
-        tools:ignore="ProtectedPermissions" />
+    <!-- Uninstall from the App library: as root (RootCommands); without root, the system's uninstall screen. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <!-- Voice search (VoiceSearchActivity). A runtime permission, not a privileged one: granted on the TV's prompt or
          with pm grant. -->
