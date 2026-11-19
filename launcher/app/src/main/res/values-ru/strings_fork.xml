@@ -60,4 +60,5 @@
     <string name="running_apps_not_closed">%1$s всё ещё работает</string>
     <string name="fork_double_home">Двойное нажатие Home — запущенные приложения</string>
     <string name="fork_double_home_desc">Два быстрых нажатия Home открывают панель запущенных приложений. Одиночное нажатие Home работает как раньше, без задержки.</string>
+    <string name="multiscreen">Мультиэкран</string>
 </resources>

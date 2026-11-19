@@ -61,4 +61,5 @@
     <string name="running_apps_not_closed">%1$s is still running</string>
     <string name="fork_double_home">Home twice: running apps</string>
     <string name="fork_double_home_desc">Pressing Home twice quickly opens the running apps panel. A single Home works as before, without delay.</string>
+    <string name="multiscreen">Multi-screen</string>
 </resources>

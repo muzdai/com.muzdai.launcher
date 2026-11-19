@@ -50,6 +50,10 @@ final class RemoteKeys {
     static final String INPUTS_OVERLAY = "inputs_overlay";
     /** vPro: the open apps over the app on screen (RunningAppsActivity, through root). */
     static final String RUNNING_APPS = "running_apps";
+    /** vPro: the TV's multi-screen ("Мультивизуальный": TV and phones side by side), its choice of layouts. */
+    static final String MULTISCREEN = "multiscreen";
+    static final android.content.ComponentName MULTISCREEN_SCREEN = new android.content.ComponentName(
+            "com.tcl.miracast", "com.tcl.miracast.activity.NewVisualGuideActivity");
 
     /** Pre-compiled regex patterns to avoid re-compiling Patterns on every entry during key parsing. */
     private static final Pattern NUMERIC_KEY = Pattern.compile("[0-9]{1,6}");
@@ -375,6 +379,14 @@ final class RemoteKeys {
         }
         if (VOICE.equals(pkg)) {
             MainActivity.voiceKey(ctx);
+            return;
+        }
+        if (MULTISCREEN.equals(pkg)) {
+            try {
+                ctx.startActivity(new Intent().setComponent(MULTISCREEN_SCREEN).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (ActivityNotFoundException | SecurityException e) {
+                android.widget.Toast.makeText(ctx, R.string.not_available, android.widget.Toast.LENGTH_SHORT).show();
+            }
             return;
         }
         if (RUNNING_APPS.equals(pkg)) {
