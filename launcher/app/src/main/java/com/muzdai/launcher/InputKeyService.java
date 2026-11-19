@@ -41,6 +41,7 @@ public class InputKeyService extends AccessibilityService {
 
     @Override
     protected void onServiceConnected() {
+        RoonHandoff.watch(this);   // gives the Eversolo back to the TV when the TV plays (RoonHandoff)
         super.onServiceConnected();
         running = this;
         Config config = Config.load(this);

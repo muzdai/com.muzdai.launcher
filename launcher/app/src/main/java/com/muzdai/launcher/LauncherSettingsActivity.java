@@ -875,6 +875,8 @@ public final class LauncherSettingsActivity extends Activity {
         p.add(header(R.string.s_roon_eversolo));
         p.add(toggle(getString(R.string.s_roon_eversolo_on), getString(R.string.s_roon_eversolo_on_desc),
                 () -> r.getBoolean(Eversolo.KEY_ON, true), on -> r.edit().putBoolean(Eversolo.KEY_ON, on).apply()));
+        p.add(toggle(getString(R.string.s_roon_eversolo_back), getString(R.string.s_roon_eversolo_back_desc),
+                () -> r.getBoolean(Eversolo.KEY_BACK, true), on -> r.edit().putBoolean(Eversolo.KEY_BACK, on).apply()));
         p.add(action(0, getString(R.string.s_roon_eversolo_host), () -> Eversolo.host(this).isEmpty()
                 ? getString(R.string.s_roon_none) : Eversolo.host(this),
                 () -> askAddress(R.string.s_roon_eversolo_host, R.string.s_roon_eversolo_hint, Eversolo.KEY_HOST, null)));

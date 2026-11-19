@@ -77,7 +77,7 @@
     <string name="s_roon_find_result">Roon: %1$s, Eversolo: %2$s</string>
     <string name="s_roon_eversolo">Eversolo</string>
     <string name="s_roon_eversolo_on">Переключать вход Eversolo</string>
-    <string name="s_roon_eversolo_on_desc">Перед запуском Roon Eversolo переключается на Internal player с той громкостью, на которой был телевизор; когда другое приложение на ТВ начинает играть, Roon встаёт на паузу, а Eversolo возвращается на ARC In.</string>
+    <string name="s_roon_eversolo_on_desc">Перед запуском Roon Eversolo переключается на Internal player с той громкостью, на которой был телевизор.</string>
     <string name="s_roon_eversolo_host">Адрес Eversolo</string>
     <string name="s_roon_eversolo_hint">IP-адрес Eversolo, например 192.168.1.20</string>
     <string name="roon_no_player_set">Roon: выберите плеер в настройках лаунчера</string>
@@ -110,4 +110,6 @@
     <string name="roon_np_radio">Roon Radio по этому треку</string>
     <string name="roon_np_quieter">Тише</string>
     <string name="roon_np_louder">Громче</string>
+    <string name="s_roon_eversolo_back">Возвращать вход на ARC In</string>
+    <string name="s_roon_eversolo_back_desc">Когда на ТВ начинает играть приложение (или открывается эфир, HDMI), а Eversolo на Internal player, Roon встаёт на паузу, а Eversolo возвращается на ARC In — кто бы ни запустил Roon.</string>
 </resources>
