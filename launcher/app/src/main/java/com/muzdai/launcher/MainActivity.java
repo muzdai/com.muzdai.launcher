@@ -2384,6 +2384,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             final Intent liveTvIntent = liveTv;
             addInputRow(rows, popup, R.drawable.ic_livetv, getString(R.string.live_tv), -1, () -> open(liveTvIntent));
         }
+        if (getPackageManager().resolveActivity(new Intent().setComponent(RemoteKeys.MULTISCREEN_SCREEN), 0) != null) {
+            addInputRow(rows, popup, R.drawable.ic_multiscreen, getString(R.string.multiscreen), -1,
+                    () -> RemoteKeys.launch(this, RemoteKeys.MULTISCREEN));
+        }
         if (rows.getChildCount() == 0) {
             Toast.makeText(this, R.string.no_inputs, Toast.LENGTH_SHORT).show();
             return;

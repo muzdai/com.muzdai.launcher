@@ -173,6 +173,10 @@ public final class InputsOverlayActivity extends Activity {
             final Intent target = liveTv;
             addRow(rows, R.drawable.ic_livetv, getString(R.string.live_tv), -1, () -> open(target));
         }
+        if (getPackageManager().resolveActivity(new Intent().setComponent(RemoteKeys.MULTISCREEN_SCREEN), 0) != null) {
+            addRow(rows, R.drawable.ic_multiscreen, getString(R.string.multiscreen), -1,
+                    () -> RemoteKeys.launch(this, RemoteKeys.MULTISCREEN));
+        }
     }
 
     /** The Live TV app tuned to the hardware tuner when it handles that URI, else its leanback entry. */
