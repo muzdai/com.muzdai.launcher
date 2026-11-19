@@ -89,7 +89,7 @@
     <string name="roon_playing">Roon: %1$s</string>
     <string name="roon_not_playing">Roon did not start playing</string>
     <string name="roon_failed">Roon: could not play</string>
-    <string name="s_roon_step">Volume step for «louder» and «quieter»</string>
+    <string name="s_roon_step">Volume step</string>
     <string name="roon_volume_is">Volume %1$s</string>
     <string name="roon_no_volume">Roon does not control this player\'s volume</string>
     <string name="roon_plays">Playing %1$s.</string>

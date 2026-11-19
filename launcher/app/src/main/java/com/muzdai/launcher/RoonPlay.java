@@ -65,9 +65,9 @@ final class RoonPlay {
 
     /** A spoken command (RoonCommands) in place of a kind: "cmd:" + its kind's name. */
     static final String CMD = "cmd:";
-    /** Settings (RoonApi.prefs): the 0–100 step of "louder" and "quieter": 0.5, 1 or 2. */
+    /** Settings (RoonApi.prefs): the 0–100 step of "louder" and "quieter": 0.5 to 5. */
     static final String KEY_STEP = "volume_step";
-    static final String[] STEPS = {"0.5", "1", "2"};
+    static final String[] STEPS = {"0.5", "1", "2", "3", "4", "5"};
 
     static double step(Context ctx) {
         return RoonCommands.number(RoonApi.prefs(ctx).getString(KEY_STEP, "1"), 1);

@@ -868,7 +868,7 @@ public final class LauncherSettingsActivity extends Activity {
             }
         }));
         p.add(action(0, getString(R.string.s_roon_find), () -> getString(R.string.s_roon_find_desc), this::findRoon));
-        String[] steps = {"0,5", "1", "2"};
+        String[] steps = {"0,5", "1", "2", "3", "4", "5"};
         p.add(choice(0, getString(R.string.s_roon_step), () -> steps,
                 () -> java.util.Arrays.asList(RoonPlay.STEPS).indexOf(r.getString(RoonPlay.KEY_STEP, "1")),
                 i -> r.edit().putString(RoonPlay.KEY_STEP, RoonPlay.STEPS[i]).apply()));

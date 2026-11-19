@@ -88,7 +88,7 @@
     <string name="roon_playing">Roon: %1$s</string>
     <string name="roon_not_playing">Roon не начал играть</string>
     <string name="roon_failed">Roon: не удалось включить</string>
-    <string name="s_roon_step">Шаг громкости для «громче» и «тише»</string>
+    <string name="s_roon_step">Шаг громкости</string>
     <string name="roon_volume_is">Громкость %1$s</string>
     <string name="roon_no_volume">Roon не управляет громкостью этого плеера</string>
     <string name="roon_plays">Играет %1$s.</string>
