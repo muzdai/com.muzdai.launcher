@@ -22,8 +22,7 @@
     <string name="fork_tile_remove">Убрать</string>
     <string name="fork_tile_closed">%1$s закрыто</string>
     <string name="fork_tile_still_running">%1$s не остановилось</string>
-    <string name="fork_tile_allow_adb">Разрешите отладку для лаунчера в окне на экране ТВ (галочка «Всегда разрешать») и повторите</string>
-    <string name="fork_tile_no_adb">Отладка выключена: нажмите «Остановить» на этой странице</string>
+    <string name="fork_tile_no_root">Нет root-доступа для лаунчера (Magisk): нажмите «Остановить» на этой странице</string>
     <string name="fork_library_to_dock">На панель</string>
     <string name="fork_dock_transparency">Прозрачность дока</string>
     <string name="fork_news_state">Новости: %1$s</string>

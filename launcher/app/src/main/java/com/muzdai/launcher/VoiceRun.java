@@ -62,7 +62,7 @@ final class VoiceRun {
     }
 
     /**
-     * "Close": pauses the app's music, then force-stops it through the TV's own ADB (LocalAdb, as the tile menu's
+     * "Close": pauses the app's music, then force-stops it as root (RootCommands, as the tile menu's
      * Close). Never this launcher; null says there is nothing to close.
      */
     static void close(Context ctx, String pkg) {
@@ -86,8 +86,8 @@ final class VoiceRun {
         String label = name;
         Handler main = new Handler(Looper.getMainLooper());
         new Thread(() -> {
-            LocalAdb.Result r = LocalAdb.forceStop(app, pkg);
-            main.post(() -> Toast.makeText(app, r == LocalAdb.Result.STOPPED
+            RootCommands.Result r = RootCommands.forceStop(pkg);
+            main.post(() -> Toast.makeText(app, r == RootCommands.Result.STOPPED
                     ? app.getString(R.string.fork_tile_closed, label) : app.getString(R.string.voice_close_failed, label),
                     Toast.LENGTH_SHORT).show());
         }, "voice-close").start();

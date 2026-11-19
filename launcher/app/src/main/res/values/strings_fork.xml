@@ -23,8 +23,7 @@
     <string name="fork_tile_remove">Remove</string>
     <string name="fork_tile_closed">%1$s closed</string>
     <string name="fork_tile_still_running">%1$s did not stop</string>
-    <string name="fork_tile_allow_adb">Allow USB debugging for this launcher on the TV prompt (tick Always allow), then try again</string>
-    <string name="fork_tile_no_adb">USB debugging is off: press Force stop on this page</string>
+    <string name="fork_tile_no_root">No root access for the launcher (Magisk): press Force stop on this page</string>
     <string name="fork_library_to_dock">To dock</string>
     <string name="fork_dock_transparency">Dock transparency</string>
     <string name="fork_news_state">News: %1$s</string>

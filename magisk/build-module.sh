@@ -1,6 +1,8 @@
 #!/bin/sh
 # Builds the Magisk module that puts vPro TV Launcher into /system/priv-app.
 #   magisk/build-module.sh <signed vPro TV Launcher apk> [out.zip]
+# MODULE_VERSION / MODULE_VERSION_CODE (the launcher's versionName / versionCode) go into module.prop when set; the
+# release workflow sets them, so each GitHub release carries a module of its own version.
 # Install on the TV:  adb push out.zip /data/local/tmp/ && adb shell su -c 'magisk --install-module /data/local/tmp/out.zip'
 # then reboot. The APK must be signed with the same key as the installed launcher; the installed copy stays as an
 # update of the system app, so later releases install with a plain `adb install -r`.
@@ -16,6 +18,8 @@ done
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 cp -r "$here/module.prop" "$here/system" "$work/"
+[ -n "${MODULE_VERSION:-}" ] && sed -i "s/^version=.*/version=$MODULE_VERSION/" "$work/module.prop"
+[ -n "${MODULE_VERSION_CODE:-}" ] && sed -i "s/^versionCode=.*/versionCode=$MODULE_VERSION_CODE/" "$work/module.prop"
 mkdir -p "$work/META-INF/com/google/android" "$work/system/priv-app/MuzdaiLauncher"
 cp "$apk" "$work/system/priv-app/MuzdaiLauncher/MuzdaiLauncher.apk"
 printf '#!/sbin/sh\n#MAGISK\n' > "$work/META-INF/com/google/android/updater-script"

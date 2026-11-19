@@ -796,7 +796,7 @@ public final class LauncherSettingsActivity extends Activity {
         p.add(header(R.string.s_voice_mic));
         p.add(toggle(getString(R.string.s_voice_mic_on), getString(R.string.s_voice_mic_desc), this::holdsAssistant,
                 on -> new Thread(() -> {
-                    boolean ok = LocalAdb.setAssistant(getApplicationContext(), on);
+                    boolean ok = RootCommands.setAssistant(getApplicationContext(), on);
                     runOnUiThread(() -> {
                         if (!ok) Toast.makeText(this, R.string.s_voice_mic_failed, Toast.LENGTH_LONG).show();
                         refresh();

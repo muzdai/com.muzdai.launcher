@@ -22,7 +22,7 @@ tag from the repository's signing secrets (`SIGNING_KEYSTORE_BASE64`, `SIGNING_S
 ## What is on the screen
 
 - **Dock**: as many apps as there are columns (4-8, default 7); the rest live in the App library. OK opens an app,
-  holding OK gives Move, Close (force-stop through the TV's own ADB), Remove, App info.
+  holding OK gives Move, Close (force-stop as root through Magisk), Remove, App info.
 - **App library**: every TV app. Hold OK: Open, To dock, App info, Uninstall (asks once; removed through the
   TV's own ADB, so no second system screen; without ADB the system's uninstall screen opens).
 - **Clock, date, greeting**, the weather under them (Open-Meteo, city picked in settings, forecast now / today /
@@ -74,8 +74,9 @@ roll back.
 ## Network use
 
 Only while Home is on screen: weather every 30 min, rates every 3 h, news every 30 min; last answers are cached.
-Sent: the typed city name (Open-Meteo geocoding), then its coordinates; nothing else identifies the TV. The
-launcher also talks to the TV's own ADB on 127.0.0.1:5555 for Close and Uninstall.
+Sent: the typed city name (Open-Meteo geocoding), then its coordinates; nothing else identifies the TV. Close,
+Uninstall, the assistant role and the media listener go through root (Magisk's su), not ADB: USB/network debugging may
+be off.
 
 ## Fonts
 

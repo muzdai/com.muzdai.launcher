@@ -14,9 +14,9 @@ import android.util.Log;
 import android.widget.Toast;
 
 /**
- * Uninstalls an app from the TV after the launcher's own confirmation. First through the TV's own ADB (LocalAdb),
- * where the shell removes it without another screen; Android only lets the installer of record uninstall silently,
- * so even a privileged launcher with DELETE_PACKAGES would get the system's confirmation. Without ADB it falls back to
+ * Uninstalls an app from the TV after the launcher's own confirmation. First as root (RootCommands),
+ * which removes it without another screen; Android only lets the installer of record uninstall silently,
+ * so even a privileged launcher with DELETE_PACKAGES would get the system's confirmation. Without root it falls back to
  * PackageInstaller (DELETE_PACKAGES) or the system's uninstall screen, which ask once more.
  */
 final class AppUninstaller {
@@ -46,12 +46,12 @@ final class AppUninstaller {
         Context app = activity.getApplicationContext();
         android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
         new Thread(() -> {
-            LocalAdb.Result r = LocalAdb.uninstall(app, pkg);
+            RootCommands.Result r = RootCommands.uninstall(pkg);
             main.post(() -> {
-                if (r == LocalAdb.Result.UNINSTALLED) {
+                if (r == RootCommands.Result.UNINSTALLED) {
                     Toast.makeText(app, app.getString(R.string.uninstall_done, label), Toast.LENGTH_LONG).show();
                 } else {
-                    Log.w(TAG, "adb uninstall " + pkg + ": " + r);
+                    Log.w(TAG, "root uninstall " + pkg + ": " + r);
                     if (!activity.isFinishing() && !activity.isDestroyed()) withInstaller(activity, pkg, label);
                 }
             });

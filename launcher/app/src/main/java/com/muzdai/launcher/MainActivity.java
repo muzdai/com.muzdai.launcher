@@ -1790,9 +1790,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /**
-     * vPro: "Close" in the tile menu, a real force-stop through the TV's own ADB (LocalAdb), as
-     * TvQuickActions does. Needs USB/network debugging on and this launcher's key allowed once on the TV's
-     * prompt; without ADB it opens App info, where Force stop is one press away.
+     * vPro: "Close" in the tile menu, a real force-stop as root (RootCommands), as
+     * TvQuickActions does. Needs the launcher's root grant in Magisk; without it opens App info, where Force stop is
+     * one press away.
      */
     private void closeApp(String pkg) {
         String label = pkg;
@@ -1802,7 +1802,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         final String name = label;
         new Thread(() -> {
-            LocalAdb.Result r = LocalAdb.forceStop(getApplicationContext(), pkg);
+            RootCommands.Result r = RootCommands.forceStop(pkg);
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
                 switch (r) {
@@ -1812,12 +1812,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     case STILL_RUNNING:
                         Toast.makeText(this, getString(R.string.fork_tile_still_running, name), Toast.LENGTH_LONG).show();
                         break;
-                    case NOT_ALLOWED:
-                        Toast.makeText(this, R.string.fork_tile_allow_adb, Toast.LENGTH_LONG).show();
-                        break;
                     default: {
                         Intent info = SystemSettings.appInfo(this, pkg);
-                        Toast.makeText(this, R.string.fork_tile_no_adb, Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, R.string.fork_tile_no_root, Toast.LENGTH_LONG).show();
                         if (info != null) open(info);
                     }
                 }

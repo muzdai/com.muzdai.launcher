@@ -16,12 +16,12 @@ public class MediaListener extends NotificationListenerService {
     }
 
     /**
-     * True once this listener is allowed. The first time it asks the TV's own ADB (LocalAdb), which needs network
-     * debugging on and this launcher's key allowed, as the tile menu's Close does. Blocking: off the main thread.
+     * True once this listener is allowed. The first time it asks root (RootCommands, Magisk's su), which needs no
+     * debugging, as the tile menu's Close does. Blocking: off the main thread.
      */
     static boolean ensureEnabled(Context ctx) {
         if (granted(ctx)) return true;
-        return LocalAdb.allowListener(ctx, component(ctx)) && granted(ctx);
+        return RootCommands.allowListener(ctx, component(ctx)) && granted(ctx);
     }
 
     /**

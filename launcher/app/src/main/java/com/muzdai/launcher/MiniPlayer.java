@@ -435,7 +435,7 @@ final class MiniPlayer {
         if (VoiceActions.QOBUZ.equals(pkg)) InputKeyService.press(pkg, InputKeyService.BY_ID + "player-card", 8000);
     }
 
-    /** Stops the music, then closes the app through the TV's own ADB (as the tile menu's Close does). */
+    /** Stops the music, then closes the app as root (as the tile menu's Close does). */
     private void stopAndClose() {
         if (roonShown) {
             View below = lastButton();
@@ -462,6 +462,6 @@ final class MiniPlayer {
         current = null;
         slab.setVisibility(View.GONE);
         Context app = act.getApplicationContext();
-        new Thread(() -> LocalAdb.forceStop(app, pkg), "mini-player-close").start();
+        new Thread(() -> RootCommands.forceStop(pkg), "mini-player-close").start();
     }
 }
