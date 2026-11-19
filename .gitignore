@@ -9,3 +9,6 @@ launcher/local.properties
 launcher/hs_err_pid*.log
 launcher/replay_pid*.log
 .DS_Store
+
+# Version history: kept locally only.
+docs/HISTORY.md

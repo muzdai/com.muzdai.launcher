@@ -1,81 +1,118 @@
 # vPro TV Launcher
 
-A home screen for Android TV / Google TV, built for one living room: a single dock of the apps that matter, the
-clock, the weather, exchange rates and a news ticker over rotating wallpapers. Package `com.muzdai.launcher`,
-shown on the TV as **vPro Launcher**. Licensed under the GPL 3 (see `LICENSE`).
+Домашний экран для Google TV / Android TV, сделанный под одну гостиную: док с нужными приложениями, часы, погода,
+курсы валют и бегущая строка новостей поверх сменяющихся обоев, голосовой поиск с ИИ и управление музыкой в Roon.
 
-Personal project; it runs on a TCL 65C8K (Google TV 14) as a privileged system app. English by default, Russian
-when the TV is in Russian.
+На ТВ называется **vPro Launcher**, пакет `com.muzdai.launcher`. Личный проект: работает на TCL 65C8K
+(Google TV 14, Magisk). Язык — английский, на ТВ с русским языком — русский. Лицензия GPL 3 (`LICENSE`).
 
-## Build
+## Что нужно
 
-JDK 17 and Android SDK platform 34:
+- Google TV / Android TV 8.0+ (проверяется на Android 14).
+- **Root (Magisk).** Закрытие приложений, удаление без второго подтверждения, список запущенных приложений,
+  разрешение для мини-плеера и роль помощника работают через `su`. Отладка по USB/сети лаунчеру не нужна.
+- Служба специальных возможностей лаунчера — для кнопок пульта и нажатий в других приложениях.
 
-```
-cd launcher && ./gradlew assembleRelease
-```
+## Установка
 
-Without signing variables the debug key signs. Releases are built by `.github/workflows/release.yml` on a `v*`
-tag from the repository's signing secrets (`SIGNING_KEYSTORE_BASE64`, `SIGNING_STORE_PASSWORD`,
-`SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`), as `vpro-tv-launcher-<version>.apk` plus its SHA-256.
-
-## What is on the screen
-
-- **Dock**: as many apps as there are columns (4-8, default 7); the rest live in the App library. OK opens an app,
-  holding OK gives Move, Close (force-stop as root through Magisk), Remove, App info.
-- **App library**: every TV app. Hold OK: Open, To dock, App info, Uninstall (asks once; removed through the
-  TV's own ADB, so no second system screen; without ADB the system's uninstall screen opens).
-- **Clock, date, greeting**, the weather under them (Open-Meteo, city picked in settings, forecast now / today /
-  3 days / week) and the National Bank of Georgia's rates next to the greeting: up to 4 of USD, EUR, GBP, TRY,
-  UAH, AMD, AZN (UAH and AMD per 10 and 1000 units, as the bank quotes them).
-- **News ticker** under the dock: Google News headlines by section; text size, speed and band transparency are
-  sliders.
-- **Wallpapers**: pictures in `/sdcard/Android/data/com.muzdai.launcher/files/wallpapers/`, named
-  `<group>-*.jpg`; a new one every 5 minutes, shuffled; a caption from `wallpapers/captions.txt`. Groups
-  (Nature, Space, Cities, Cinema, Games) are picked in settings, or Random for all of them.
-- **Top bar**: App library, Inputs, Network, Settings. The Inputs panel also opens over any app from the remote's
-  Input button.
-
-## Settings
-
-The on-screen gear and the remote's gear open the launcher's settings, laid out like the TV's own: categories on
-the left, a preview of the focused one on the right. OK or Right opens, Back or Left goes up, Left and Right move
-a slider.
-
-- **System**: TV settings.
-- **Home screen**: Home screen (apps per row, dock transparency, clock format), Wallpapers, Information
-  (weather, exchange rates and currencies, news), Remote buttons, Animation.
-- Reset launcher settings, About.
-
-Built-in defaults live in `launcher/app/src/main/res/values/config.xml` and `fork_defaults.xml`; the owner's
-choices are stored on the TV on top of them.
-
-## Remote buttons
-
-Netflix (4062), Prime Video (4099), YouTube (190) and Live TV (4001), as a TCL G08 remote sends them. Each can open
-any TV app, the Inputs panel, Live TV (the hardware tuner), Launcher settings, nothing, or keep its default. The gear
-(83) opens Launcher settings, Input (178) the Inputs panel, TCL Channel (4020) voice search. The key helper is an
-accessibility service (`InputKeyService`); the TV must have it enabled:
-
-```
+```sh
+adb install -r vpro-tv-launcher-<версия>.apk
+adb shell cmd package set-home-activity com.muzdai.launcher/.MainActivity
 adb shell settings put secure enabled_accessibility_services com.muzdai.launcher/.InputKeyService
 adb shell settings put secure accessibility_enabled 1
 ```
 
-## Root
+Дальше один раз разрешить лаунчеру root в Magisk. Новые версии ставятся поверх: `adb install -r`.
 
-The launcher is made for a rooted TV (Magisk): closing apps, uninstalling without a second prompt, the running apps
-panel, the media listener and the assistant role run as root through Magisk's `su`. Grant the launcher root once in
-Magisk. It is an ordinary app: no system or privileged install is needed, and new versions install with
-`adb install -r`.
+## Главный экран
 
-## Network use
+- **Док** — от 4 до 8 приложений в ряду (по умолчанию 7), остальные в библиотеке приложений. Удержание OK:
+  переместить, закрыть, убрать, сведения о приложении.
+- **Библиотека приложений** — все приложения ТВ. Удержание OK: открыть, на панель, сведения, удалить.
+- **Часы, дата, приветствие.** Под ними погода (Open-Meteo, город выбирается в настройках, прогноз: сейчас,
+  сегодня, 3 дня, неделя). Рядом курсы Национального банка Грузии к лари — до 4 валют из USD, EUR, GBP, TRY, UAH,
+  AMD, AZN.
+- **Лента новостей** под доком: украинская редакция Google News по разделам. Российские и пророссийские источники
+  отсеиваются, запасные ленты — DW, BBC Russian, «Украинская правда», РБК-Украина, Радио Свобода, «Зеркало недели»,
+  «Обозреватель». Обновление каждые 5–60 минут; размер, скорость и прозрачность подложки настраиваются.
+- **Обои** — картинки из `Android/data/com.muzdai.launcher/files/wallpapers/` с именами `<группа>-*.jpg`, смена
+  каждые 5 минут, подписи из `wallpapers/captions.txt`. Группы (Природа, Космос, Города, Кино, Игры) выбираются в
+  настройках.
+- **Мини-плеер** над кнопками верхней панели, пока что-то играет в свёрнутом приложении или в Roon: обложка,
+  «Исполнитель — Трек», развернуть, закрыть.
+- **Верхняя панель**: голосовой поиск, библиотека приложений, источники, сеть, настройки.
 
-Only while Home is on screen: weather every 30 min, rates every 3 h, news every 30 min; last answers are cached.
-Sent: the typed city name (Open-Meteo geocoding), then its coordinates; nothing else identifies the TV. Close,
-Uninstall, the assistant role and the media listener go through root (Magisk's su), not ADB: USB/network debugging may
-be off.
+## Голосовой поиск
 
-## Fonts
+Запускается кнопкой микрофона на пульте (лаунчер забирает роль цифрового помощника, переключатель в настройках),
+кнопкой на экране или любой кнопкой пульта, которой это назначено.
 
-The UI font is Outfit, under the SIL Open Font License (`launcher/FONT-LICENSE-OFL.txt`).
+- Запрос разбирает ИИ: сначала модель на домашнем сервере, если он задан, затем Google Gemini, без них — простые
+  правила. ИИ исправляет ослышки в названиях и понимает, что и где искать.
+- **«Включи …»** — сразу запускает найденное: фильмы и сериалы из Emby (в том числе по TMDB, если в библиотеке
+  название на другом языке), видео в YouTube, музыку в выбранном музыкальном приложении (YouTube Music, Spotify,
+  Deezer, Qobuz или Roon). «Альбом …» играет альбом с первого трека.
+- Поверх открытого плеера поиск идёт в этом плеере; **«закрой»** закрывает приложение на экране.
+- **Вопросы** («какая погода завтра», «курс доллара», «кто такой …») — ответ текстом на экране. На вопрос, ответ на
+  который уже виден на главном экране, лаунчер сначала ругается (отключается в настройках).
+- Back отменяет запись или ожидание ответа.
+
+Qobuz запускается без нажатий по экрану, если на ТВ стоит модуль [Qobuz Bridge](https://github.com/muzdai/qobuz-bridge).
+
+## Roon
+
+Лаунчер подключается к Roon Core как расширение: один раз включить «vPro TV Launcher» в Roon → Settings →
+Extensions.
+
+- **Голосом**: «включи … на руне» (трек, альбом, исполнитель вперемешку, плейлист — по всей медиатеке и подключённым
+  сервисам), «пауза», «дальше», «громче / тише», «звук на 30» (шкала 0–100), «что играет», «включи радио по этой
+  песне», «включи следующим …», «добавь в очередь …», «перенеси музыку на <зона>», «включи везде». Roon можно
+  выбрать музыкальным приложением по умолчанию — тогда «на руне» говорить не нужно.
+- **Экран «сейчас играет»** с кнопками для пульта без медиакнопок; медиакнопки пульта тоже идут в Roon, пока музыку
+  запустил лаунчер.
+- **Заставка** во время музыки показывает обложку и название вместо часов.
+- **Eversolo** (стример с eARC): перед запуском лаунчер переключает его с ARC In на Internal player с той же
+  громкостью, на которой был ТВ, и следит, чтобы музыка действительно заиграла. Когда на ТВ начинает играть другое
+  приложение, Roon встаёт на паузу, а Eversolo возвращается на ARC In — только если музыку запускал лаунчер (музыку,
+  включённую с телефона, он не трогает).
+
+## Кнопки пульта
+
+Кнопки приложений пульта TCL (Netflix 4062, Prime Video 4099, YouTube 190, Live TV 4001, TCL Channel 4020) можно
+переназначить: любое приложение ТВ, источники, голосовой поиск, мультиэкран, запущенные приложения, эфир, настройки
+лаунчера, ничего или поведение по умолчанию. Двойное нажатие Home открывает запущенные приложения (отключается).
+
+- **Источники** — HDMI, телеканалы и мультиэкран TCL поверх любого приложения, без выхода на главный экран.
+- **Запущенные приложения** — список открытых приложений с возможностью закрыть; системные, которые закрывать нельзя,
+  не показываются.
+
+## Файлы на ТВ
+
+В папке лаунчера `Android/data/com.muzdai.launcher/files/` (в репозиторий ничего из этого не попадает):
+
+| Файл | Что в нём |
+|---|---|
+| `voice-keys.txt` | `emby_url`, `emby_key`, `tmdb_key`, `spotify_id`, `spotify_secret` — по строке `имя=значение` |
+| `gemini-key.txt` | ключ Google AI Studio для Gemini (можно ввести и в настройках) |
+| `local-ai.txt` | адрес модели на домашнем сервере (можно ввести и в настройках) |
+| `wallpapers/` | обои и `captions.txt` |
+
+## Сеть
+
+Погода — раз в 30 минут, курсы — раз в 3 часа, новости — по настройке, и только пока виден главный экран; последние
+ответы кешируются. Наружу уходят название города (поиск в Open-Meteo) и его координаты; голосовые запросы — на
+распознавание Google и выбранной модели ИИ. Roon и Eversolo — только в локальной сети.
+
+## Сборка
+
+JDK 17 и Android SDK 34:
+
+```sh
+cd launcher && ./gradlew assembleRelease
+```
+
+Без переменных подписи APK подписывается отладочным ключом. Релиз собирается GitHub Actions по тегу `v*`
+(`.github/workflows/release.yml`) из секретов `SIGNING_KEYSTORE_BASE64`, `SIGNING_STORE_PASSWORD`,
+`SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`: `vpro-tv-launcher-<версия>.apk` и его SHA-256.
+
+Шрифт интерфейса — Outfit, SIL Open Font License (`launcher/FONT-LICENSE-OFL.txt`).
