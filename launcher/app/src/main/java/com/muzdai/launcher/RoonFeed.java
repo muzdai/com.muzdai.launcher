@@ -141,7 +141,6 @@ final class RoonFeed {
             if (why != null) notOurs(why);
         }
         RoonNow.push(RoonNow.Snapshot.of(target()));
-        RoonVolume.update(app, mine);
     }
 
     // ---- queue ------------------------------------------------------------------------------------
