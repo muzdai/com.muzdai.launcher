@@ -127,6 +127,7 @@ final class RoonPlay {
         if (RESUME.equals(kind)) {
             api.control(output, "play");
         } else {
+            RoonHandoff.commanded();   // the queue Play Now replaces is our doing
             r = RoonSearch.play(api.browser(output), query, kind);
             if (r == null) {
                 toast(app, app.getString(R.string.roon_nothing, query));
@@ -301,6 +302,7 @@ final class RoonPlay {
 
     /** False when the connection dropped and the command may be tried once more. */
     private static boolean commandOnce(Context app, RoonCommands.Kind kind, String arg, boolean mayRetry) {
+        RoonHandoff.commanded();
         String output = RoonApi.output(app);
         if (output == null) {
             toast(app, app.getString(R.string.roon_no_player_set));
@@ -467,11 +469,13 @@ final class RoonPlay {
                 if (!right && replay != null && !replayed) {
                     android.util.Log.i("Roon", "zone " + state + " with " + (three != null ? three.optString("line1") : "nothing")
                             + ", not " + expected.title + ": Play Now again");
+                    RoonHandoff.commanded();
                     replay.run();
                     replayed = true;
                     last = now;
                 } else if (("paused".equals(state) || "stopped".equals(state)) && presses < 2) {
                     android.util.Log.i("Roon", "zone " + state + ": Play again");
+                    RoonHandoff.commanded();
                     api.control(output, "play");
                     presses++;
                     last = now;

@@ -865,6 +865,7 @@ public final class LauncherSettingsActivity extends Activity {
         }, i -> {
             if (i < roonIds.length) {
                 r.edit().putString(RoonApi.KEY_OUTPUT, roonIds[i]).putString(RoonApi.KEY_OUTPUT_NAME, roonNames[i]).apply();
+                RoonFeed.restart();
             }
         }));
         p.add(action(0, getString(R.string.s_roon_find), () -> getString(R.string.s_roon_find_desc), this::findRoon));
@@ -875,8 +876,6 @@ public final class LauncherSettingsActivity extends Activity {
         p.add(header(R.string.s_roon_eversolo));
         p.add(toggle(getString(R.string.s_roon_eversolo_on), getString(R.string.s_roon_eversolo_on_desc),
                 () -> r.getBoolean(Eversolo.KEY_ON, true), on -> r.edit().putBoolean(Eversolo.KEY_ON, on).apply()));
-        p.add(toggle(getString(R.string.s_roon_eversolo_back), getString(R.string.s_roon_eversolo_back_desc),
-                () -> r.getBoolean(Eversolo.KEY_BACK, true), on -> r.edit().putBoolean(Eversolo.KEY_BACK, on).apply()));
         p.add(action(0, getString(R.string.s_roon_eversolo_host), () -> Eversolo.host(this).isEmpty()
                 ? getString(R.string.s_roon_none) : Eversolo.host(this),
                 () -> askAddress(R.string.s_roon_eversolo_host, R.string.s_roon_eversolo_hint, Eversolo.KEY_HOST, null)));
@@ -954,6 +953,7 @@ public final class LauncherSettingsActivity extends Activity {
                 .setView(box)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     RoonApi.prefs(this).edit().putString(key, input.getText().toString().trim()).apply();
+                    if (RoonApi.KEY_HOST.equals(key)) RoonFeed.restart();
                     refresh();
                     if (after != null) after.run();
                 })

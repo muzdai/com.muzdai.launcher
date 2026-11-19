@@ -2,18 +2,16 @@ package com.muzdai.launcher;
 
 import android.content.Context;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.Looper;
 
 import org.json.JSONObject;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * What Roon's zone (the player chosen in settings, or whichever plays) is doing, for the screens that show it: Home's
- * mini player, the now playing screen, the screensaver. Read once a second, only while one of them listens.
+ * mini player, the now playing screen, the screensaver. Pushed by Roon (RoonFeed), no polling.
  */
 final class RoonNow {
     private RoonNow() { }
@@ -73,11 +71,8 @@ final class RoonNow {
         void onRoon(Snapshot s);
     }
 
-    private static final long EVERY_MS = 1000, AFTER_FAILURE_MS = 5000;
     private static final List<Listener> listeners = new ArrayList<>();
     private static final Handler main = new Handler(Looper.getMainLooper());
-    private static Handler worker;
-    private static Context app;
     private static volatile Snapshot last;
 
     /** The last reading, or null. */
@@ -86,63 +81,29 @@ final class RoonNow {
     }
 
     static synchronized void listen(Context ctx, Listener l) {
-        app = ctx.getApplicationContext();
+        RoonFeed.start(ctx);
         if (!listeners.contains(l)) listeners.add(l);
-        if (worker == null) {
-            HandlerThread t = new HandlerThread("roon-now");
-            t.start();
-            worker = new Handler(t.getLooper());
-        }
-        if (listeners.size() == 1) {
-            worker.removeCallbacksAndMessages(null);
-            worker.post(RoonNow::read);
-        } else if (last != null) {
-            l.onRoon(last);
-        }
+        if (last != null) l.onRoon(last);
     }
 
     static synchronized void unlisten(Listener l) {
         listeners.remove(l);
-        if (listeners.isEmpty() && worker != null) worker.removeCallbacksAndMessages(null);
     }
 
-    /** Read again now (after a button). */
-    static synchronized void soon() {
-        if (worker != null && !listeners.isEmpty()) {
-            worker.removeCallbacksAndMessages(null);
-            worker.postDelayed(RoonNow::read, 300);
-        }
+    /** Nothing to do: Roon pushes every change (RoonFeed). */
+    static void soon() {
     }
 
-    private static void read() {
-        Context ctx;
-        synchronized (RoonNow.class) {
-            if (listeners.isEmpty()) return;
-            ctx = app;
-        }
-        Snapshot s = null;
-        long next = EVERY_MS;
-        if (RoonApi.configured(ctx)) {
-            try {
-                s = Snapshot.of(RoonPlay.target(RoonApi.get(ctx, 500), RoonApi.output(ctx)));
-            } catch (IOException e) {
-                next = AFTER_FAILURE_MS;
-            }
-        } else {
-            next = AFTER_FAILURE_MS;
-        }
+    /** A new reading from RoonFeed (any thread); null when Roon is gone. */
+    static void push(Snapshot s) {
         last = s;
-        Snapshot done = s;
         main.post(() -> {
             List<Listener> now;
             synchronized (RoonNow.class) {
                 now = new ArrayList<>(listeners);
             }
-            for (Listener l : now) l.onRoon(done);
+            for (Listener l : now) l.onRoon(s);
         });
-        synchronized (RoonNow.class) {
-            if (!listeners.isEmpty()) worker.postDelayed(RoonNow::read, next);
-        }
     }
 
     /** The cover as the core serves it over HTTP, fitted in size × size; null without one. */

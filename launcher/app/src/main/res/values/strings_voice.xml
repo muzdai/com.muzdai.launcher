@@ -78,7 +78,7 @@
     <string name="s_roon_find_result">Roon: %1$s, Eversolo: %2$s</string>
     <string name="s_roon_eversolo">Eversolo</string>
     <string name="s_roon_eversolo_on">Switch the Eversolo input</string>
-    <string name="s_roon_eversolo_on_desc">Before Roon plays, the Eversolo goes to Internal player with the volume the TV was at.</string>
+    <string name="s_roon_eversolo_on_desc">Before Roon plays from the launcher, the Eversolo goes to Internal player with the volume the TV was at; when an app on the TV then plays (or live TV or an HDMI input opens), Roon pauses and the Eversolo goes back to ARC In. A Roon started elsewhere (the Roon app, a phone) is left alone.</string>
     <string name="s_roon_eversolo_host">Eversolo address</string>
     <string name="s_roon_eversolo_hint">IP address of the Eversolo, e.g. 192.168.1.20</string>
     <string name="roon_no_player_set">Roon: choose a player in the launcher\'s settings</string>
@@ -111,6 +111,4 @@
     <string name="roon_np_radio">Roon Radio from this track</string>
     <string name="roon_np_quieter">Quieter</string>
     <string name="roon_np_louder">Louder</string>
-    <string name="s_roon_eversolo_back">Return the input to ARC In</string>
-    <string name="s_roon_eversolo_back_desc">When an app on the TV starts playing (or live TV or an HDMI input opens) while the Eversolo is on Internal player, Roon pauses and the Eversolo goes back to ARC In, whoever started Roon.</string>
 </resources>

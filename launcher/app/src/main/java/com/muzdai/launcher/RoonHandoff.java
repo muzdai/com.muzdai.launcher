@@ -7,11 +7,12 @@ import android.os.HandlerThread;
 import java.io.IOException;
 
 /**
- * Gives the Eversolo back to the TV: whenever the TV makes its own sound (another app's media starts playing, or live
- * TV or an HDMI input comes up in com.tcl.tv) while the Eversolo is on its own player, Roon is paused and the Eversolo
- * goes back to the TV's eARC input, whoever started Roon (the launcher, the Roon app, a phone). The check is local
- * every couple of seconds (media sessions, the window in front); the Eversolo is asked only when that changes.
- * Runs from the key service's start for as long as the launcher's process lives.
+ * Gives the Eversolo back to the TV after Roon played from here: Roon tells no one who started it, but the launcher
+ * knows when it did (voice, the now playing screen, media keys). While that Roon is "ours" and the TV makes its own
+ * sound (another app's media starts playing, or live TV or an HDMI input comes up in com.tcl.tv) with the Eversolo
+ * on its own player, Roon is paused and the Eversolo goes back to eARC. A Roon started elsewhere (the Roon app, a
+ * phone) is left alone. "Ours" ends with the hand back, when the zone stops, or when the zone resumes without a
+ * command from here; it is kept in settings, so a restart of the launcher keeps it.
  */
 final class RoonHandoff {
     private RoonHandoff() { }
@@ -21,8 +22,6 @@ final class RoonHandoff {
     private static Handler worker;
     private static Context app;
     private static boolean watching;
-    /** Roon was started from here and the TV has not taken the sound back: a paused Roon is still "ours" to show. */
-    private static volatile boolean ours;
     /** The app whose sound was last seen (null: none): each new one is checked once. */
     private static String lastSound;
 
@@ -31,36 +30,38 @@ final class RoonHandoff {
         app = ctx.getApplicationContext();
         if (watching) return;
         watching = true;
-        if (worker == null) {
-            HandlerThread t = new HandlerThread("roon-handoff");
-            t.start();
-            worker = new Handler(t.getLooper());
-        }
+        HandlerThread t = new HandlerThread("roon-handoff");
+        t.start();
+        worker = new Handler(t.getLooper());
         worker.postDelayed(RoonHandoff::tick, EVERY_MS);
+        RoonFeed.start(app);
     }
 
-    /** Roon was just started from here. */
+    /** Roon was just started from here: it is ours. */
     static void arm(Context ctx) {
-        ours = true;
+        RoonFeed.started(ctx);
         watch(ctx);
     }
 
+    /** A command from here that is not a start (pause, volume, next): what follows from it is still ours. */
+    static void commanded() {
+        RoonFeed.commanded();
+    }
+
+    /** Roon plays from here (and the TV has not taken the sound back): a paused Roon is still shown, keys go to it. */
     static boolean armed() {
-        return ours;
+        return RoonFeed.ours();
     }
 
     static void disarm() {
-        ours = false;
-    }
-
-    /** Giving the input back is on (its own switch in settings) and the Eversolo's address is known. */
-    static boolean enabled(Context ctx) {
-        return !Eversolo.host(ctx).isEmpty() && RoonApi.prefs(ctx).getBoolean(Eversolo.KEY_BACK, true);
+        Context c = app;
+        if (c != null) RoonFeed.drop(c);
     }
 
     private static void tick() {
         try {
-            if (enabled(app)) check();
+            if (armed()) check();
+            else lastSound = null;
         } catch (RuntimeException e) {
             android.util.Log.w("Roon", "handoff: " + e);
         }
@@ -68,6 +69,7 @@ final class RoonHandoff {
     }
 
     private static void check() {
+        if (!Eversolo.enabled(app)) return;
         String other = MediaListener.playingApp(app);
         String front = InputKeyService.frontPackage();
         String sound = other != null ? other : VoiceActions.TV_APP.equals(front) ? front : null;
@@ -88,7 +90,7 @@ final class RoonHandoff {
 
     /** Pauses Roon's zone and puts the Eversolo back on eARC, when it is on its own player. Blocking. */
     static void handBack(Context app) {
-        ours = false;
+        RoonFeed.drop(app);
         String output = RoonApi.output(app);
         if (output != null) {
             try {
@@ -99,7 +101,7 @@ final class RoonHandoff {
                 android.util.Log.w("Roon", "pause: " + e);
             }
         }
-        if (!enabled(app)) return;
+        if (!Eversolo.enabled(app)) return;
         try {
             Eversolo e = new Eversolo(Eversolo.host(app));
             if (Eversolo.INTERNAL.equals(e.inputs().currentTag())) e.setInput(Eversolo.ARC);

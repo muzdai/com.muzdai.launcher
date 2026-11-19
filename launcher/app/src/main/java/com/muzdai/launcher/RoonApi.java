@@ -97,6 +97,12 @@ final class RoonApi {
     final String host;
     private final AtomicInteger ids = new AtomicInteger();
     private final Map<Integer, LinkedBlockingQueue<Moo>> waiting = new ConcurrentHashMap<>();
+    /** Subscriptions: every answer (Subscribed, Changed), and a "CLOSED" one when the connection ends. */
+    interface Subscriber {
+        void on(Moo m);
+    }
+
+    private final Map<Integer, Subscriber> subscribers = new ConcurrentHashMap<>();
     private final CountDownLatch registered = new CountDownLatch(1);
     private volatile boolean closed;
     private WebSocketClient ws;
@@ -127,6 +133,8 @@ final class RoonApi {
                 closed = true;
                 opened.countDown();
                 for (LinkedBlockingQueue<Moo> q : waiting.values()) q.offer(new Moo("CLOSED", "closed", -1, null));
+                for (Subscriber s : subscribers.values()) s.on(new Moo("CLOSED", "closed", -1, null));
+                subscribers.clear();
             }
 
             @Override public void onError(Exception e) {
@@ -221,8 +229,37 @@ final class RoonApi {
             send(Moo.format("COMPLETE", "Success", m.requestId, null));
             return;
         }
+        Subscriber s = subscribers.get(m.requestId);
+        if (s != null) {
+            try {
+                s.on(m);
+            } catch (RuntimeException e) {
+                android.util.Log.w("Roon", "subscriber: " + e);
+            }
+            return;
+        }
         LinkedBlockingQueue<Moo> q = waiting.get(m.requestId);
         if (q != null) q.offer(m);
+    }
+
+    /** Subscribes (subscribe_zones, subscribe_queue…); the subscriber hears every answer on the socket's thread. */
+    void subscribe(String name, JSONObject body, Subscriber s) throws IOException {
+        int id = ids.getAndIncrement();
+        try {
+            body.put("subscription_key", id);
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+        subscribers.put(id, s);
+        send(Moo.request(id, name, body));
+        if (closed) {
+            subscribers.remove(id);
+            throw new IOException(name + ": not connected");
+        }
+    }
+
+    boolean isOpen() {
+        return !closed && ws != null && ws.isOpen() && isRegistered();
     }
 
     private void send(byte[] b) {

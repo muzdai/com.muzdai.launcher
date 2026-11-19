@@ -17,8 +17,8 @@ import java.net.URL;
  * switching it, and its volume. Each input keeps its own volume (0..200, 0.5 dB a step, 200 = 0 dB). Blocking.
  */
 final class Eversolo {
-    /** Settings (RoonApi.prefs): the address; switch to the internal player for Roon; back to eARC for the TV. */
-    static final String KEY_HOST = "eversolo_host", KEY_ON = "eversolo_on", KEY_BACK = "eversolo_back";
+    /** Settings (RoonApi.prefs): the address; switch inputs (to the internal player for Roon, back to eARC). */
+    static final String KEY_HOST = "eversolo_host", KEY_ON = "eversolo_on";
     static final int PORT = 9529;
     /** Input tags: the streamer's own player (Roon Ready) and the TV's eARC. */
     static final String INTERNAL = "XMOS", ARC = "EARC";
